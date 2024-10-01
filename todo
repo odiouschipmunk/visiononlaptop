@@ -1,3 +1,11 @@
+roboflow data:
+breaking the court up into parts: https://universe.roboflow.com/squashcourtkeypoints/squash_court_segmentation
+ball bouncing and hitting and flying: https://universe.roboflow.com/gg-pmm09/group4-ifa89
+general ball detection: https://universe.roboflow.com/squash-otltn/ball-detection-vamqx
+squash racket detection: https://universe.roboflow.com/converter-for-frt/squashracquet
+
+
+
 to process and collect data: "1. Collect Video Data
 Record Matches: Capture high-quality videos of squash matches, focusing on various angles, distances, and lighting conditions. You can use a good camera or even a smartphone with a high-resolution setting.
 Slow Motion Capture: If possible, use slow-motion recording to capture more details of the racket and ball in action. This can help with accurate annotations.
