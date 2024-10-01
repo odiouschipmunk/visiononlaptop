@@ -1,35 +1,17 @@
-from roboflow import Roboflow
+import cv2
+import numpy as np
 
-# Initialize the Roboflow object with your API key
-rf = Roboflow(api_key="8kkmyg5axTR1VHCPGKlf")
+# Define the dimensions of the image
+height = 340
+width = 640
 
-# Retrieve your current workspace and project name
-print(rf.workspace())
-import os
-# Specify the project for upload
-# let's you have a project at https://app.roboflow.com/my-workspace/my-project
-workspaceId = 'squash-2ezxm'
-projectId = 'vision-qbw66'
-project = rf.workspace(workspaceId).project(projectId)
+# Create a white image (all pixel values set to 255)
+white_image = np.ones((height, width, 3), dtype=np.uint8) * 255
 
-# Upload the image to your project
+# Save the image to a file
+cv2.imwrite('white_image.png', white_image)
 
-"""
-Optional Parameters:
-- num_retry_uploads: Number of retries for uploading the image in case of failure.
-- batch_name: Upload the image to a specific batch.
-- split: Upload the image to a specific split.
-- tag: Store metadata as a tag on the image.
-- sequence_number: [Optional] If you want to keep the order of your images in the dataset, pass sequence_number and sequence_size..
-- sequence_size: [Optional] The total number of images in the sequence. Defaults to 100,000 if not set.
-"""
-def uploadframes(folder):
-    for filename in os.listdir(folder):
-        path = os.path.join(folder, filename)
-        project.upload(
-            image_path=path,
-            batch_name="frames",
-            split="train",
-            num_retry_uploads=3,
-        )
-uploadframes("frames")
+# Display the image
+cv2.imshow('White Image', white_image)
+cv2.waitKey(0)
+cv2.destroyAllWindows()

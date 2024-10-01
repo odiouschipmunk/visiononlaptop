@@ -320,6 +320,7 @@ results=model(source='full-games\🇪🇬 ElSherbini v Abbas 🇪🇬  El Gouna 
 
 import cv2
 from ultralytics import YOLO
+import numpy as np
 
 # Load models
 pose_model = YOLO('models\\yolo11s-pose.pt')
@@ -329,39 +330,54 @@ ballmodel = YOLO('best.pt')
 video_file = 'Squash Farag v Hesham - Houston Open 2022 - Final Highlights.mp4'
 video_folder = 'full-games'
 path = video_folder + "/" + video_file
+heatmap = np.zeros((340, 640), dtype=np.float32)  # Create a blank canvas, make sure to adjust size based on video res later on
 
-# Open video file
 cap = cv2.VideoCapture(path)
-
 while cap.isOpened():
     success, frame = cap.read()
     if not success:
         break
 
-    # Detect poses
     pose_results = pose_model(frame)
+    ball = ballmodel(frame)
 
-    # Detect objects using custom model
-    custom_results = ballmodel(frame)
-
-    # Annotate frame with pose results
     annotated_frame = pose_results[0].plot()
-
-    # Annotate frame with custom model results
-    for box in custom_results[0].boxes:
-        # Ensure box.xyxy returns four values
+    
+    print(f'pose boxes: {pose_results[0].boxes}')
+    print(f'\n\n\n\npose object:{pose_results}')
+    print(f'\n\n\n\npose keypoint:{pose_results[0].keypoints}')
+    
+    for person in pose_results[0].keypoints.xyn if pose_results[0].keypoints.xyn is not None else []:
+        print('length: '+len(person))
+        print('person: '+person)
+        try:
+            left_ankle_x = person[16][0]  # X coordinate of left ankle
+            left_ankle_y = person[16][1]  # Y coordinate of left ankle
+            right_ankle_x = person[15][0]  # X coordinate of right ankle
+            right_ankle_y = person[15][1]  # Y coordinate of right ankle
+            if left_ankle_x ==0.0000 or left_ankle_y==0.0000 or right_ankle_x==0.0000 or right_ankle_y==0.0000:
+                continue
+            left_ankle=(int(left_ankle_x), int(left_ankle_y))
+            right_ankle=(int(right_ankle_x), int(right_ankle_y))
+            heatmap[left_ankle[1], left_ankle[0]] += 1  # Increment heatmap at left foot placement
+            heatmap[right_ankle[1], right_ankle[0]] += 1 # Increment heatmap at right foot placement
+        except IndexError:
+            print('IndexError')
+            continue
+    for box in ball[0].boxes:
         coords = box.xyxy[0] if len(box.xyxy) == 1 else box.xyxy
         x1, y1, x2, y2 = coords
         label = ballmodel.names[int(box.cls)]
         confidence = float(box.conf)  # Convert tensor to float
         cv2.rectangle(annotated_frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
         cv2.putText(annotated_frame, f'{label} {confidence:.2f}', (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
-
-    # Display the annotated frame
+    heatmap_blurred = cv2.GaussianBlur(heatmap, (15, 15), 0)
+    heatmap_normalized = cv2.normalize(heatmap_blurred, None, 0, 255, cv2.NORM_MINMAX)
+    heatmap_colored = cv2.applyColorMap(heatmap_normalized.astype(np.uint8), cv2.COLORMAP_JET)
+    cv2.imwrite('foot_placement_heatmap.png', 'white_img.png')  # Save the heatmap
     cv2.imshow('Annotated Frame', annotated_frame)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
-# Release the video capture object and close display window
 cap.release()
 cv2.destroyAllWindows()
