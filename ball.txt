@@ -138,3 +138,15 @@ Position(in pixels): [454, 196]
 Distance: 10.44030650891055
 Position(in pixels): [458, 207]
 Distance: 11.704699910719626
+Position(in pixels): [326, 172]
+Distance: 368.59191526673504
+Position(in pixels): [326, 172]
+Distance: 0.0
+Position(in pixels): [326, 172]
+Distance: 368.59191526673504
+Position(in pixels): [326, 172]
+Distance: 0.0
+Position(in pixels): [245, 135]
+Distance: 89.05054744357274
+Position(in pixels): [257, 108]
+Distance: 29.546573405388315
