@@ -6,15 +6,15 @@ import math
 pose_model = YOLO('models/yolo11m-pose.pt')
 ballmodel = YOLO('trained-models/g-ball2.pt')
 racketmodel=YOLO('trained-models/squash-racket.pt')
-courtmodel=YOLO('trained-models/court-key!.pt')
+#courtmodel=YOLO('trained-models/court-key!.pt')
 # Video file path
 video_file = 'Squash Farag v Hesham - Houston Open 2022 - Final Highlights.mp4'
 video_folder = 'full-games'
 path = 'Untitled design.mp4'
 
 cap = cv2.VideoCapture(path)
-frame_width = 1920
-frame_height = 1080
+frame_width = 640
+frame_height = 360
 players={}
 from Ball import Ball
 # Get video dimensions
@@ -38,6 +38,7 @@ def drawmap(lx,ly,rx,ry, map):
     ry = min(max(ry, 0), map.shape[0] - 1)
     map[ly, lx] += 1
     map[ry, rx] += 1
+player_move=[[]]
 while cap.isOpened():
     success, frame = cap.read()
     if not success:
@@ -49,7 +50,7 @@ while cap.isOpened():
     pose_results = pose_model(frame)
     #only plot the top 2 confs
     annotated_frame=pose_results[0].plot()
-    court_results=courtmodel(frame)
+    #court_results=courtmodel(frame)
     # Check if keypoints exist and are not empty
     if pose_results[0].keypoints.xyn is not None and len(pose_results[0].keypoints.xyn[0]) > 0:
         for person in pose_results[0].keypoints.xyn:
@@ -124,7 +125,7 @@ while cap.isOpened():
         boxes = track_results[0].boxes.xywh.cpu()
         track_ids = track_results[0].boxes.id.int().cpu().tolist()
         keypoints = track_results[0].keypoints.cpu().numpy()
-
+        
         current_ids = set(track_ids)
 
         # Update or add players for currently visible track IDs
@@ -137,6 +138,7 @@ while cap.isOpened():
                 player_last_positions[track_id] = (x, y)  # Update position
                 if track_id in occluded_players:
                     occluded_players.remove(track_id)  # Player is no longer occluded
+                print(f"Player {track_id} updated.")
 
             # If the player is new and fewer than MAX_PLAYERS are being tracked
             elif len(players) < max_players:
@@ -178,6 +180,8 @@ while cap.isOpened():
     highestconf=0
     x1c=x2c=y1c=y2c=0
 
+    #court detection
+    '''
     for box in court_results[0].boxes:
         coords = box.xyxy[0] if len(box.xyxy) == 1 else box.xyxy
         x1temp, y1temp, x2temp, y2temp = coords
@@ -187,7 +191,10 @@ while cap.isOpened():
         cv2.putText(annotated_frame, f'{label} {confidence:.2f}', (int(x1temp), int(y1temp) - 10), 
         cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
         #print(f'{label} {confidence:.2f} GOT COURT')
+  
+    '''
     # Save the heatmap
+
     cv2.imwrite('foot_placement_heatmap2.png', heatmap_colored)
     cv2.imwrite('ball_heatmap.png', ballmap_colorized)
     # Display the annotated frame
