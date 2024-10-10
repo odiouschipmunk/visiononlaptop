@@ -5,17 +5,18 @@ import math
 # Load models
 pose_model = YOLO('models/yolo11m-pose.pt')
 ballmodel = YOLO('trained-models/g-ball2.pt')
-racketmodel=YOLO('trained-models/squash-racket.pt')
+#racketmodel=YOLO('trained-models/squash-racket.pt')
 #courtmodel=YOLO('trained-models/court-key!.pt')
 # Video file path
 video_file = 'Squash Farag v Hesham - Houston Open 2022 - Final Highlights.mp4'
 video_folder = 'full-games'
-path = 'Untitled design.mp4'
+path = 'main.mp4'
 
 cap = cv2.VideoCapture(path)
 frame_width = 640  
 frame_height = 360
 players={}
+courtref=0
 occlusion_times={} 
 last_frame=[]
 for i in range(1, 3):
@@ -26,14 +27,16 @@ import logging
 from Player import Player
 max_players = 2
 player_last_positions = {}
-occluded_players = set()    # To keep track of occluded players
 frame_count=0
 logging.getLogger('ultralytics').setLevel(logging.ERROR) 
 output_path = 'annotated.mp4'
 fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Codec for .mp4 file
 fps = 25  # Frames per second
 out = cv2.VideoWriter(output_path, fourcc, fps, (frame_width, frame_height))
-
+def sum_pixels_in_bbox(frame, bbox):
+    x, y, w, h = bbox
+    roi = frame[int(y):int(y+h), int(x):int(x+w)]
+    return np.sum(roi)
 # Create a blank canvas for heatmap based on video resolution
 heatmap = np.zeros((frame_height, frame_width), dtype=np.float32)
 p1heatmap=np.zeros((frame_height, frame_width), dtype=np.float32)
@@ -43,7 +46,7 @@ ballmap=np.zeros((frame_height, frame_width), dtype=np.float32)
 #other track ids necessary as since players get occluded, im just going to assign that track id to the previous id(1 or 2) to the last occluded player
 #really need to fix this as if there are 2 occluded players, it will not work
 otherTrackIds=[[0,0],[1,1],[2,2]]
-updated=[False, False]
+updated=[[False, 0], [False, 0]]
 def find_match_2d_array(array, x):
     for i in range(len(array)):
         if array[i][0] == x:
@@ -67,93 +70,112 @@ def findLastTwo(array):
     if len(possibleis)>1:
         return possibleis[-1]
     return -1
+
+def findLast(i):
+    possibleits=[]
+    for it in range(len(otherTrackIds)):
+        if otherTrackIds[it][1]==i:
+            possibleits.append(it)
+    return possibleits[-1]
 p1ref=0
 p2ref=0
+
 '''
 def findRef(img):
     return cv2.
 '''
 def framepose(frame, model):
     track_results = model.track(frame, persist=True)
-    if track_results and hasattr(track_results[0], 'keypoints') and track_results[0].keypoints is not None:
-        # Extract boxes, track IDs, and keypoints from pose results
-        boxes = track_results[0].boxes.xywh.cpu()
-        track_ids = track_results[0].boxes.id.int().cpu().tolist()
-        keypoints = track_results[0].keypoints.cpu().numpy()
+    try:
+        if track_results and hasattr(track_results[0], 'keypoints') and track_results[0].keypoints is not None:
+            # Extract boxes, track IDs, and keypoints from pose results
+            boxes = track_results[0].boxes.xywh.cpu()
+            track_ids = track_results[0].boxes.id.int().cpu().tolist()
+            keypoints = track_results[0].keypoints.cpu().numpy()
+            
+            current_ids = set(track_ids)
+
+            # Update or add players for currently visible track IDs
+            #note that this only works with occluded players < 2, still working on it :(
         
-        current_ids = set(track_ids)
-
-        # Update or add players for currently visible track IDs
-        #note that this only works with occluded players < 2, still working on it :(
-    
-        for box, track_id, kp in zip(boxes, track_ids, keypoints):
-            x, y, w, h = box
-            
-            if not find_match_2d_array(otherTrackIds, track_id):
-                if updated[0]:
-                    otherTrackIds.append([track_id, 2])
-                    print(track_id)
-                    print(len(otherTrackIds))
-                    print(f'player {otherTrackIds[track_id][0]} not in track id, adding as player {otherTrackIds[track_id][1]}')
-
-                else:
-                    otherTrackIds.append([track_id, 1])
-                    print(track_id)
-                    print(len(otherTrackIds))
-                    print(f'player {otherTrackIds[track_id][0]} not in track id, adding as player {otherTrackIds[track_id][1]}')
+            for box, track_id, kp in zip(boxes, track_ids, keypoints):
+                x, y, w, h = box
                 
-            '''
-            not updated with otherTrackIds
-            if track_ids[track_id]>2:
-                print(f'track id is greater than 2: {track_ids[track_id]}')
-                if track_ids[track_id] not in occluded_players:
-                    occ_id=occluded_players.pop()
+                if not find_match_2d_array(otherTrackIds, track_id):
+                    if updated[0]:
+                        otherTrackIds.append([track_id, 2])
+                        print(track_id)
+                        print(len(otherTrackIds))
+                        print(f'player {otherTrackIds[track_id][0]} not in track id, adding as player {otherTrackIds[track_id][1]}')
 
-                    print(' occ id part 153 occluded player reassigned to another player that was occluded previously. this only works with <2 occluded players, fix this soon!!!!!')
-                if len(occluded_players)==1:
-                    players[occluded_players.pop()]=players[track_id.get(track_id)]
-                    print(' line 156 occluded player reassigned to another player that was occluded previously. this only works with <2 occluded players, fix this soon!!!!!')
-            '''
+                    else:
+                        otherTrackIds.append([track_id, 1])
+                        print(track_id)
+                        print(len(otherTrackIds))
+                        print(f'player {otherTrackIds[track_id][0]} not in track id, adding as player {otherTrackIds[track_id][1]}')
+                    
+                '''
+                not updated with otherTrackIds
+                if track_ids[track_id]>2:
+                    print(f'track id is greater than 2: {track_ids[track_id]}')
+                    if track_ids[track_id] not in occluded_players:
+                        occ_id=occluded_players.pop()
 
-            playerid=findLastTwo(otherTrackIds)
-            if playerid==-1:
-                playerid=findLastOne(otherTrackIds)
-
-            if track_id==1:
-                playerid=1
-            if track_id==2:
-                playerid=2
-            
-            print(f'even though we are working with {otherTrackIds[track_id][0]}, the player id is {playerid}')
-            print(otherTrackIds)
-            # If player is already tracked, update their info
-            if playerid in players:
-                players[playerid].add_pose(kp)
-                player_last_positions[playerid] = (x, y)  # Update position
-                players[playerid].add_pose(kp)
-                print(f'track id: {track_id}')
-                print(f'playerid: {playerid}')
-                if playerid ==2:
-                    print(f'updated p2')
-
-                if playerid in occluded_players:
-                    occluded_players.remove(playerid)  # Player is no longer occluded
-                if playerid == 1:
-                    updated[0]=True
+                        print(' occ id part 153 occluded player reassigned to another player that was occluded previously. this only works with <2 occluded players, fix this soon!!!!!')
+                    if len(occluded_players)==1:
+                        players[occluded_players.pop()]=players[track_id.get(track_id)]
+                        print(' line 156 occluded player reassigned to another player that was occluded previously. this only works with <2 occluded players, fix this soon!!!!!')
+                '''
+                #if updated[0], then that means that player 1 was updated last
+                #bc of this, we can assume that the next player is player 2
+                if track_id==1:
+                    playerid=1
+                elif track_id==2:
+                    playerid=2
+                elif updated[0][1]>updated[1][1]:
+                    playerid=2
+                elif updated[0][1]<updated[1][1]:
+                    playerid=1
+                elif updated[0][1]==updated[1][1]:
+                    playerid=1
+                    print(f'both players have been updated, so we are assuming that player 1 is the next player')
                 else:
-                    updated[1]=True
-                print(f"Player {playerid} updated.")
-            
-            # If the player is new and fewer than MAX_PLAYERS are being tracked
-            if len(players) < max_players:
-                players[otherTrackIds[track_id][0]] = Player(player_id=otherTrackIds[track_id][1])
-                player_last_positions[playerid] = (x, y)
-                if playerid == 1:
-                    updated[0]=True
-                else:
-                    updated[1]=True
-                print(f"Player {playerid} added.")
-
+                    print(f'could not find player id for track id {track_id}')
+                
+                print(f'even though we are working with {otherTrackIds[track_id][0]}, the player id is {playerid}')
+                print(otherTrackIds)
+                # If player is already tracked, update their info
+                if playerid in players:
+                    players[playerid].add_pose(kp)
+                    player_last_positions[playerid] = (x, y)  # Update position
+                    players[playerid].add_pose(kp)
+                    print(f'track id: {track_id}')
+                    print(f'playerid: {playerid}')
+                    if playerid==1:
+                        updated[0][0]=True
+                        updated[0][1]=frame_count
+                    if playerid ==2:
+                        updated[1][0]=True
+                        updated[1][1]=frame_count
+                    print(updated)
+                    # Player is no longer occluded
+                    
+                    print(f"Player {playerid} updated.")
+                
+                # If the player is new and fewer than MAX_PLAYERS are being tracked
+                if len(players) < max_players:
+                    players[otherTrackIds[track_id][0]] = Player(player_id=otherTrackIds[track_id][1])
+                    player_last_positions[playerid] = (x, y)
+                    if playerid == 1:
+                        updated[0][0]=True
+                        updated[0][1]=frame_count
+                    else:
+                        updated[1][0]=True
+                        updated[1][1]=frame_count
+                    print(f"Player {playerid} added.")
+    except Exception as e:
+        print('GOT ERROR: ', e)
+        pass
 
 def drawmap(lx,ly,rx,ry, map):
 
@@ -165,15 +187,30 @@ def drawmap(lx,ly,rx,ry, map):
     map[ly, lx] += 1
     map[ry, rx] += 1
 player_move=[[]]
+courtref=np.int64(courtref)
 while cap.isOpened():
     success, frame = cap.read()
     if not success:
         break
     frame = cv2.resize(frame, (frame_width, frame_height))
+    
     frame_count+=1
+    if frame_count==1:
+        print('frame 1')
+        courtref=np.int64(sum_pixels_in_bbox(frame, [0,0,frame_width, frame_height]))
+        print(courtref)
     #frame count for debugging
     #frame 240-300 is good for occlusion player tracking testing
-    if frame_count<=200 and frame_count %5 != 0:
+    if frame_count<=200 and frame_count %1 != 0:
+        continue
+    currentref=int(sum_pixels_in_bbox(frame, [0,0,frame_width, frame_height]))
+    #general court refrence to only get the first camera angle throughout the video
+    if abs(courtref - currentref) > courtref * 0.35:
+        print('most likely not original camera frame')
+        print('current ref: ', currentref)
+        print('court ref: ', courtref)
+        print(f'frame count: {frame_count}')
+        print(f'difference between current ref and court ref: {abs(courtref - currentref)}')
         continue
     # Pose and ball detection
     ball = ballmodel(frame)
@@ -210,10 +247,12 @@ while cap.isOpened():
         confidence = float(box.conf)  # Convert tensor to float
         avgxtemp=int((x1temp+x2temp)/2)
         avgytemp=int((y1temp+y2temp)/2)
+        '''
         if abs(avgxtemp-363)<10 and abs(avgytemp-72)<10:
             #false positive near the "V"
             #TODO find out how to check for false positives for general videos
             continue
+        '''
         if confidence>highestconf:
             highestconf=confidence
             x1=x1temp
@@ -223,6 +262,7 @@ while cap.isOpened():
     cv2.rectangle(annotated_frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
     cv2.putText(annotated_frame, f'{label} {highestconf:.2f}', (int(x1), int(y1) - 10), 
     cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+    print(label)
     cv2.putText(annotated_frame, f'Frame: {frame_count}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
     avg_x=int((x1+x2)/2)
     avg_y=int((y1+y2)/2)
@@ -293,7 +333,7 @@ while cap.isOpened():
         #print(f'players 1 latest pose: {players.get(1).get_latest_pose()}')
         #print(f'players 2 latest pose: {players.get(2).get_latest_pose()}')
         if players.get(1).get_latest_pose() or players.get(2).get_latest_pose() is not None:
-            print('line 265')
+            #print('line 265')
             try:
                 p1_left_ankle_x = int(players.get(1).get_latest_pose().xyn[0][16][0] * frame_width)
                 p1_left_ankle_y = int(players.get(1).get_latest_pose().xyn[0][16][1] * frame_height)

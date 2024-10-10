@@ -3036,3 +3036,13 @@ Position(in pixels): [402, 95]
 Distance: 8.06225774829855
 Position(in pixels): [416, 131]
 Distance: 38.62641583165593
+Position(in pixels): [233, 235]
+Distance: 330.9289954053588
+Position(in pixels): [233, 235]
+Distance: 0.0
+Position(in pixels): [217, 219]
+Distance: 22.627416997969522
+Position(in pixels): [235, 161]
+Distance: 60.728905802755904
+Position(in pixels): [235, 161]
+Distance: 0.0
