@@ -299,6 +299,22 @@ get_refrence_points()
 #refrence[9] is left top of square
 #refrence[10] is T
 #refrence[11] is the middle of T and top middle court
+btmleft=0
+btmright=1
+topright=2
+topleft=3
+btmmiddle=4
+rbsq=5
+topmiddle=6
+lbsq=7
+rtsq=8
+ltsq=9
+t=10
+tmdl=11
+
+theatmap1=np.zeros((frame_height, frame_width), dtype=np.float32)
+theatmap2=np.zeros((frame_height, frame_width), dtype=np.float32)
+
 
 while cap.isOpened():
     success, frame = cap.read()
@@ -488,13 +504,15 @@ while cap.isOpened():
             avgpy1=int((p1_left_ankle_y+p1_right_ankle_y)/2)
             avgpx2=int((p2_left_ankle_x+p2_right_ankle_x)/2)
             avgpy2=int((p2_left_ankle_y+p2_right_ankle_y)/2)
-            print(refrence_points)
+            #print(refrence_points)
             text_p1t=f'P1 distance from T: {math.hypot(refrence_points[10][0]-avgpx1, refrence_points[10][1]-avgpy1)}'
             text_p2t=f'P2 distance from T: {math.hypot(refrence_points[10][0]-avgpx2, refrence_points[10][1]-avgpy2)}'
             cv2.putText(annotated_frame, text_p1t, (10, frame_height - 60), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1)
             cv2.putText(annotated_frame, text_p2t, (10, frame_height - 80), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1)
 
-
+    for ref in refrence_points:
+        #cv2.circle(frame1, (x, y), 5, (0, 255, 0), -1)
+        cv2.circle(annotated_frame, (ref[0], ref[1]), 5, (0,255,0), 2)
     cv2.imwrite('foot_placement_heatmap2.png', heatmap_colored)
     cv2.imwrite('ball_heatmap.png', ballmap_colorized)
     # Display the annotated frame
