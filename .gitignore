@@ -10,3 +10,5 @@ ns.pt
 trained-models
 *.mp4
 *.png
+misc
+*.json
