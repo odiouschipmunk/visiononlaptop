@@ -962,7 +962,6 @@ while cap.isOpened():
         cv2.circle(annotated_frame, (ref[0], ref[1]), 5, (0, 255, 0), 2)
 
     # Display the annotated frame
-    cv2.imshow("Annotated Frame", annotated_frame)
     """
     COURT DETECTION
     for box in court[0].boxes:
@@ -1014,8 +1013,8 @@ while cap.isOpened():
         bally=mainball.getlastpos()[1]
         if ballx!=0 and bally!=0:
             if [ballx, bally] not in ballxy:
-                ballxy.append([ballx, bally])
-                print(f'ballx: {ballx}, bally: {bally}, appended to ballxy with length {len(ballxy)}')
+                ballxy.append([ballx, bally, frame_count])
+                print(f'ballx: {ballx}, bally: {bally}, appended to ballxy with length {len(ballxy)} and frame count as : {frame_count}')
     # Draw the ball trajectory
     
     if len(ballxy)>2:
@@ -1023,12 +1022,17 @@ while cap.isOpened():
             if ballxy[i - 1] is None or ballxy[i] is None:
                 continue
             #print(ballxy)
-            cv2.line(annotated_frame, (ballxy[i - 1][0], ballxy[i - 1][1]), (ballxy[i][0], ballxy[i][1]), (0, 255, 0), 2)
+            if ballxy[i][2]-ballxy[i-1][2]<50:
+                cv2.line(annotated_frame, (ballxy[i - 1][0], ballxy[i - 1][1]), (ballxy[i][0], ballxy[i][1]), (0, 255, 0), 2)
+                cv2.circle(annotated_frame, (ballxy[i - 1][0], ballxy[i-1][1]), 5, (0, 255, 0), -1)
+                cv2.circle(annotated_frame, (ballxy[i][0], ballxy[i][1]), 5, (0,255,0), -1)
+            
     for ball_pos in ballxy:
         print(f'wrote to frame on line 1028 with coords: {ball_pos}')
         cv2.circle(annotated_frame, (ball_pos[0], ball_pos[1]), 5, (0, 255, 0), -1)
     ball_out.write(annotated_frame)
     out.write(annotated_frame)
+    cv2.imshow("Annotated Frame", annotated_frame)
 
     if cv2.waitKey(1) & 0xFF == ord("q"):
         break
