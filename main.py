@@ -300,6 +300,47 @@ def get_refrence_points():
         cv2.destroyAllWindows()
 
 
+import random
+def predict_next_position(pos1, pos2, frame_width, frame_height, error_margin=5):
+    """
+    Predict the next ball position based on the past two positions with an area of error.
+
+    Parameters:
+    pos1 (tuple): The first past position (x1, y1).
+    pos2 (tuple): The second past position (x2, y2).
+    frame_width (int): The width of the frame.
+    frame_height (int): The height of the frame.
+    error_margin (int): The margin of error for the prediction.
+
+    Returns:
+    tuple: The predicted next position (x, y) with an area of error.
+    """
+    x1, y1 = pos1
+    x2, y2 = pos2
+
+    # Calculate the difference in positions
+    dx = x2 - x1
+    dy = y2 - y1
+
+    # Predict the next position
+    next_x = x2 + dx
+    next_y = y2 + dy
+
+    # Add random error within the margin
+    error_x = random.randint(-error_margin, error_margin)
+    error_y = random.randint(-error_margin, error_margin)
+
+    predicted_x = next_x + error_x
+    predicted_y = next_y + error_y
+
+    # Ensure the predicted position is within the frame bounds
+    predicted_x = max(0, min(predicted_x, frame_width - 1))
+    predicted_y = max(0, min(predicted_y, frame_height - 1))
+
+    return (predicted_x, predicted_y)
+
+
+
 get_refrence_points()
 
 # note for anyone else seeing this:
@@ -1008,28 +1049,32 @@ while cap.isOpened():
 
     ballx=bally=0
     #ball stuff
-    if mainball is not None and mainball.getlastpos() is not None and mainball.getlastpos() !=(0,0):
-        ballx=mainball.getlastpos()[0]
-        bally=mainball.getlastpos()[1]
-        if ballx!=0 and bally!=0:
+    if mainball is not None and mainball.getlastpos() is not None and mainball.getlastpos() != (0, 0):
+        ballx = mainball.getlastpos()[0]
+        bally = mainball.getlastpos()[1]
+        if ballx != 0 and bally != 0:
             if [ballx, bally] not in ballxy:
                 ballxy.append([ballx, bally, frame_count])
                 print(f'ballx: {ballx}, bally: {bally}, appended to ballxy with length {len(ballxy)} and frame count as : {frame_count}')
+
     # Draw the ball trajectory
-    
-    if len(ballxy)>2:
-        for i in range(1,len(ballxy)):
+    if len(ballxy) > 2:
+        for i in range(1, len(ballxy)):
             if ballxy[i - 1] is None or ballxy[i] is None:
                 continue
-            #print(ballxy)
-            if ballxy[i][2]-ballxy[i-1][2]<50:
-                cv2.line(annotated_frame, (ballxy[i - 1][0], ballxy[i - 1][1]), (ballxy[i][0], ballxy[i][1]), (0, 255, 0), 2)
-                cv2.circle(annotated_frame, (ballxy[i - 1][0], ballxy[i-1][1]), 5, (0, 255, 0), -1)
-                cv2.circle(annotated_frame, (ballxy[i][0], ballxy[i][1]), 5, (0,255,0), -1)
-            
+            if ballxy[i][2] - ballxy[i - 1][2] < 7:
+                if frame_count - ballxy[i][2] < 7:
+                    cv2.line(annotated_frame, (ballxy[i - 1][0], ballxy[i - 1][1]), (ballxy[i][0], ballxy[i][1]), (0, 255, 0), 2)
+                    cv2.circle(annotated_frame, (ballxy[i - 1][0], ballxy[i - 1][1]), 5, (0, 255, 0), -1)
+                    cv2.circle(annotated_frame, (ballxy[i][0], ballxy[i][1]), 5, (0, 255, 0), -1)
+                    next_pos = predict_next_position((ballxy[i - 1][0], ballxy[i - 1][1]), (ballxy[i][0], ballxy[i][1]), frame_width, frame_height)
+                    cv2.circle(annotated_frame, (next_pos[0], next_pos[1]), 5, (0, 255, 0), -1)
+
     for ball_pos in ballxy:
-        print(f'wrote to frame on line 1028 with coords: {ball_pos}')
-        cv2.circle(annotated_frame, (ball_pos[0], ball_pos[1]), 5, (0, 255, 0), -1)
+        if frame_count - ball_pos[2] < 7:
+            #print(f'wrote to frame on line 1028 with coords: {ball_pos}')
+            cv2.circle(annotated_frame, (ball_pos[0], ball_pos[1]), 5, (0, 255, 0), -1)
+
     ball_out.write(annotated_frame)
     out.write(annotated_frame)
     cv2.imshow("Annotated Frame", annotated_frame)
