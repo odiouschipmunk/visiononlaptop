@@ -8,56 +8,6 @@ from squash import Refrencepoints, Predict, Functions
 #TODO: use embeddings to correctly find the different players
 
 
-'''
-
-pixel_points = np.array([
-    [x0, y0],  # Bottom left
-    [x1, y1],  # Bottom right
-    [x2, y2],  # Top right
-    [x3, y3],  # Top left
-    [x4, y4],  # Bottom middle
-    [x5, y5],  # Right bottom of square
-    [x6, y6],  # Top middle
-    [x7, y7],  # Left bottom of square
-    [x8, y8],  # Right top of square
-    [x9, y9],  # Left top of square
-    [x10, y10],  # T
-    [x11, y11]   # Middle of T and top middle court
-], dtype=np.float32)
-# [0] is x val and [1] is y val
-# refrence[0] is top left,
-# refrence[1] is top right
-# refrence[2] is bottom right
-# refrence[3] is bottom left
-# refrence[4] is left bottom of service box
-# refrence[5] is right bottom of service box
-# refrence[6] is T
-# refrence[7] is left of service line
-# refrence[8] is right of service line
-# refrence[9] is left of the top line of the front court
-# refrence[10] is right of the top line of the front court
-# Define the reference points in real-world coordinates (court)
-# These should be the actual coordinates of the reference points on the court
-
-
-pixel_points_2d = pixel_points[:, :2]
-real_world_points_2d = real_world_points[:, :2]
-
-# Calculate the homography matrix
-H, status = cv2.findHomography(pixel_points_2d, real_world_points_2d)
-
-def transform_point(pixel_point, H):
-    pixel_point_homogeneous = np.append(pixel_point, 1)  # Convert to homogeneous coordinates
-    real_world_point_homogeneous = np.dot(H, pixel_point_homogeneous)
-    real_world_point = real_world_point_homogeneous / real_world_point_homogeneous[2]  # Convert back to Cartesian coordinates
-    return real_world_point[:2]  # Return only x and y coordinates
-
-# Example usage
-pixel_point = np.array([x, y])
-real_world_point = transform_point(pixel_point, H)
-print(f"Real-world coordinates: {real_world_point}")
-
-'''
 
 
 
@@ -139,39 +89,10 @@ pixdiff1percentage=pixdiff2percentage=[]
 avgcosinediff=0
 cosinediffs=[]
 from PIL import Image
-'''
-import clip
 
-imagemodel, preprocess = clip.load("ViT-B/32", device="cpu")
-'''
 import torch
 player1imagerefrence=player2imagerefrence=None
 player1refrenceembeddings=player2refrenceembeddings=None
-# Function to get image embeddings
-'''
-def get_image_embeddings(image):
-    image = preprocess(image).unsqueeze(0).to("cpu")
-    with torch.no_grad():
-        embeddings = imagemodel.encode_image(image)
-    return embeddings.cpu().numpy()
-
-# Function to calculate cosine similarity between two embeddings
-def cosine_similarity(embedding1, embedding2):
-    # Flatten the embeddings to 1D if they are 2D (like (1, 512))
-    embedding1 = np.squeeze(embedding1)  # Shape becomes (512,)
-    embedding2 = np.squeeze(embedding2)  # Shape becomes (512,)
-
-    dot_product = np.dot(embedding1, embedding2)
-    norm1 = np.linalg.norm(embedding1)
-    norm2 = np.linalg.norm(embedding2)
-    
-    # Check if any norm is zero to avoid division by zero
-    if norm1 == 0 or norm2 == 0:
-        return 0  # Return a similarity of 0 if one of the embeddings is invalid
-
-    return dot_product / (norm1 * norm2)
-'''
-
 
 
 
@@ -179,15 +100,6 @@ p1distancesfromT = []
 p2distancesfromT = []
 
 
-def drawmap(lx, ly, rx, ry, map):
-
-    # Update heatmap at the ankle positions
-    lx = min(max(lx, 0), map.shape[1] - 1)  # Bound lx to [0, width-1]
-    ly = min(max(ly, 0), map.shape[0] - 1)  # Bound ly to [0, height-1]
-    rx = min(max(rx, 0), map.shape[1] - 1)  # Bound rx to [0, width-1]
-    ry = min(max(ry, 0), map.shape[0] - 1)
-    map[ly, lx] += 1
-    map[ry, rx] += 1
 
 
 player_move = [[]]
@@ -406,7 +318,7 @@ while cap.isOpened():
                     f"Position(in pixels): {mainball.getloc()}\nDistance: {distance}\n"
                 )
                 # print(f'Position(in pixels): {mainball.getloc()}\nDistance: {distance}\n')
-                drawmap(
+                Functions.drawmap(
                     mainball.getloc()[0],
                     mainball.getloc()[1],
                     mainball.getlastpos()[0],
@@ -656,27 +568,7 @@ while cap.isOpened():
 
 
 
-    """
-    for box in court_results[0].boxes:
-        coords = box.xyxy[0] if len(box.xyxy) == 1 else box.xyxy
-        x1temp, y1temp, x2temp, y2temp = coords
-        label = courtmodel.names[int(box.cls)]
-        confidence = float(box.conf)
-        cv2.rectangle(annotated_frame, (int(x1temp), int(y1temp)), (int(x2temp), int(y2temp)), (255, 0, 0), 2)
-        cv2.putText(annotated_frame, f'{label} {confidence:.2f}', (int(x1temp), int(y1temp) - 10), 
-        cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
-        #print(f'{label} {confidence:.2f} GOT COURT')
-    """
-    """
-    for box in racket_results[0].boxes:
-        coords = box.xyxy[0] if len(box.xyxy) == 1 else box.xyxy
-        x1temp, y1temp, x2temp, y2temp = coords
-        label = racketmodel.names[int(box.cls)]
-        confidence = float(box.conf)
-        cv2.rectangle(annotated_frame, (int(x1temp), int(y1temp)), (int(x2temp), int(y2temp)), (255, 0, 0), 2)
-        cv2.putText(annotated_frame, f'{label} {confidence:.2f}', (int(x1temp), int(y1temp) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
-        print(f'{label} {confidence:.2f} GOT RACKET')
-        """
+
     # Save the heatmap
     # print(players)
     # print(players.get(1).get_latest_pose())
