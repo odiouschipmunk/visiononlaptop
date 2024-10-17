@@ -2,6 +2,7 @@ import cv2
 from ultralytics import YOLO
 import numpy as np
 import math
+from squash import Refrencepoints, Predict, Functions
 # Define the reference points in pixel coordinates (image)
 # These should be the coordinates of the reference points in the image
 #TODO: use embeddings to correctly find the different players
@@ -70,7 +71,7 @@ video_file = "Squash Farag v Hesham - Houston Open 2022 - Final Highlights.mp4"
 video_folder = "full-games"
 path = "main.mp4"
 import matplotlib.pyplot as plt
-ballvideopath='balltracking.mp4'
+ballvideopath='output/balltracking.mp4'
 cap = cv2.VideoCapture(path)
 frame_width = 640
 frame_height = 360
@@ -80,11 +81,11 @@ occlusion_times = {}
 last_frame = []
 for i in range(1, 3):
     occlusion_times[i] = 0
-from Ball import Ball
+from squash.Ball import Ball
 
 # Get video dimensions
 import logging
-from Player import Player
+from squash.Player import Player
 
 max_players = 2
 player_last_positions = {}
@@ -92,7 +93,7 @@ frame_count = 0
 trackid1 = True
 trackid2 = True
 logging.getLogger("ultralytics").setLevel(logging.ERROR)
-output_path = "annotated.mp4"
+output_path = "output/annotated.mp4"
 fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # Codec for .mp4 file
 fps = 25  # Frames per second
 out = cv2.VideoWriter(output_path, fourcc, fps, (frame_width, frame_height))
@@ -117,42 +118,7 @@ playerRefrence2 = 0
 otherTrackIds = [[0, 0], [1, 1], [2, 2]]
 updated = [[False, 0], [False, 0]]
 
-
-def find_match_2d_array(array, x):
-    for i in range(len(array)):
-        if array[i][0] == x:
-            return True
-    return False
-
-
-def findLastOne(array):
-    possibleis = []
-    for i in range(len(array)):
-        if array[i][1] == 1:
-            possibleis.append(i)
-    # print(possibleis)
-    if len(possibleis) > 1:
-        return possibleis[-1]
-
-    return -1
-
-
-def findLastTwo(array):
-    possibleis = []
-    for i in range(len(array)):
-        if array[i][1] == 2:
-            possibleis.append(i)
-    if len(possibleis) > 1:
-        return possibleis[-1]
-    return -1
-
-
-def findLast(i):
-    possibleits = []
-    for it in range(len(otherTrackIds)):
-        if otherTrackIds[it][1] == i:
-            possibleits.append(it)
-    return possibleits[-1]
+refrence_points=Refrencepoints.get_refrence_points(path=path, frame_width=frame_width, frame_height=frame_height)
 
 
 refrences1 = []
@@ -237,111 +203,9 @@ def is_camera_angle_switched(frame, refrence_image, threshold=0.5):
     return score < threshold
 
 
-import json, os
-
-refrence_points = []
-
-
-def get_refrence_points():
-    # Mouse callback function to capture click events
-    def click_event(event, x, y, flags, params):
-        if event == cv2.EVENT_LBUTTONDOWN:
-            refrence_points.append((x, y))
-            print(f"Point captured: ({x}, {y})")
-            cv2.circle(frame1, (x, y), 5, (0, 255, 0), -1)
-            cv2.imshow("Court", frame1)
-
-    # Function to save refrence points to a file
-    def save_refrence_points(file_path):
-        with open(file_path, "w") as f:
-            json.dump(refrence_points, f)
-        print(f"refrence points saved to {file_path}")
-
-    # Function to load refrence points from a file
-    def load_refrence_points(file_path):
-        global refrence_points
-        with open(file_path, "r") as f:
-            refrence_points = json.load(f)
-        print(f"refrence points loaded from {file_path}")
-
-    # Load the frame (replace 'path_to_frame' with the actual path)
-    if os.path.isfile("refrence_points.json"):
-        load_refrence_points("refrence_points.json")
-        print(f"Loaded refrence points: {refrence_points}")
-    else:
-        print(
-            "No refrence points file found. Please click on the court to set refrence points."
-        )
-        cap2 = cv2.VideoCapture(path)
-        if not cap2.isOpened():
-            print("Error opening video file")
-            exit()
-        ret1, frame1 = cap2.read()
-        if not ret1:
-            print("Error reading video file")
-            exit()
-        frame1 = cv2.resize(frame1, (frame_width, frame_height))
-        cv2.imshow("Court", frame1)
-        cv2.setMouseCallback("Court", click_event)
-
-        print(
-            "Click on the key points of the court. Press 's' to save and 'q' to quit.\nMake sure to click in the following order shown by the example"
-        )
-        example_image = cv2.imread("annotated-squash-court.png")
-        example_image_resized = cv2.resize(example_image, (frame_width, frame_height))
-        cv2.imshow("Court Example", example_image_resized)
-        while True:
-            key = cv2.waitKey(1) & 0xFF
-            if key == ord("s"):
-                save_refrence_points("refrence_points.json")
-            elif key == ord("q"):
-                break
-
-        cv2.destroyAllWindows()
-
-
-import random
-def predict_next_position(pos1, pos2, frame_width, frame_height, error_margin=5):
-    """
-    Predict the next ball position based on the past two positions with an area of error.
-
-    Parameters:
-    pos1 (tuple): The first past position (x1, y1).
-    pos2 (tuple): The second past position (x2, y2).
-    frame_width (int): The width of the frame.
-    frame_height (int): The height of the frame.
-    error_margin (int): The margin of error for the prediction.
-
-    Returns:
-    tuple: The predicted next position (x, y) with an area of error.
-    """
-    x1, y1 = pos1
-    x2, y2 = pos2
-
-    # Calculate the difference in positions
-    dx = x2 - x1
-    dy = y2 - y1
-
-    # Predict the next position
-    next_x = x2 + dx
-    next_y = y2 + dy
-
-    # Add random error within the margin
-    error_x = random.randint(-error_margin, error_margin)
-    error_y = random.randint(-error_margin, error_margin)
-
-    predicted_x = next_x + error_x
-    predicted_y = next_y + error_y
-
-    # Ensure the predicted position is within the frame bounds
-    predicted_x = max(0, min(predicted_x, frame_width - 1))
-    predicted_y = max(0, min(predicted_y, frame_height - 1))
-
-    return (predicted_x, predicted_y)
 
 
 
-get_refrence_points()
 
 # note for anyone else seeing this:
 # [0] is x val and [1] is y val
@@ -360,7 +224,7 @@ get_refrence_points()
 theatmap1 = np.zeros((frame_height, frame_width), dtype=np.float32)
 theatmap2 = np.zeros((frame_height, frame_width), dtype=np.float32)
 outlierdiffs=[]
-heatmap_overlay_path='white.png'
+heatmap_overlay_path='output/white.png'
 heatmap_image=cv2.imread(heatmap_overlay_path)
 if heatmap_image is None:
     raise FileNotFoundError(f'Could not find heatmap overlay image at {heatmap_overlay_path}')
@@ -537,7 +401,7 @@ while cap.isOpened():
                 avg_x - mainball.getlastpos()[0], avg_y - mainball.getlastpos()[1]
             )
 
-            with open("ball.txt", "a") as f:
+            with open("output/ball.txt", "a") as f:
                 f.write(
                     f"Position(in pixels): {mainball.getloc()}\nDistance: {distance}\n"
                 )
@@ -553,6 +417,7 @@ while cap.isOpened():
     '''
     FRAMEPOSE
     '''
+    
     track_results = pose_model.track(frame, persist=True)
     try:
         if (
@@ -576,7 +441,7 @@ while cap.isOpened():
                 player_image = Image.fromarray(player_crop)
                 #embeddings=get_image_embeddings(player_image)
                 psum=sum_pixels_in_bbox(frame, [x, y, w, h])
-                if not find_match_2d_array(otherTrackIds, track_id):
+                if not Functions.find_match_2d_array(otherTrackIds, track_id):
                     # player 1 has been updated last
                     if updated[0][1] > updated[1][1]:
                         if len(refrences2)>1:
@@ -908,7 +773,7 @@ while cap.isOpened():
             text_p1 = f"P1 position(ankle): {avgxank1},{avgyank1}"
             cv2.putText(
                 annotated_frame,
-                f"{otherTrackIds[findLast(1)][1]}",
+                f"{otherTrackIds[Functions.findLast(1, otherTrackIds)][1]}",
                 (p1_left_ankle_x, p1_left_ankle_y),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.4,
@@ -917,7 +782,7 @@ while cap.isOpened():
             )
             cv2.putText(
                 annotated_frame,
-                f"{otherTrackIds[findLast(2)][1]}",
+                f"{otherTrackIds[Functions.findLast(2, otherTrackIds)][1]}",
                 (p2_left_ankle_x, p2_left_ankle_y),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.4,
@@ -992,8 +857,8 @@ while cap.isOpened():
             plt2.legend()
 
             # Save the plot to a file
-            plt.savefig('distance_from_t_over_time1.png')
-            plt2.savefig('distance_from_t_over_time2.png')
+            plt.savefig('output/distance_from_t_over_time1.png')
+            plt2.savefig('output/distance_from_t_over_time2.png')
 
             # Close the plot to free up memory
             plt.close()
@@ -1045,7 +910,7 @@ while cap.isOpened():
         combined_image = cv2.addWeighted(white_image, 0.5, heatmap_overlay, 0.5, 0)
 
         # Save the combined image
-        cv2.imwrite('heatmap_ankle.png', combined_image)
+        cv2.imwrite('output/heatmap_ankle.png', combined_image)
 
     ballx=bally=0
     #ball stuff
@@ -1067,7 +932,7 @@ while cap.isOpened():
                     cv2.line(annotated_frame, (ballxy[i - 1][0], ballxy[i - 1][1]), (ballxy[i][0], ballxy[i][1]), (0, 255, 0), 2)
                     cv2.circle(annotated_frame, (ballxy[i - 1][0], ballxy[i - 1][1]), 5, (0, 255, 0), -1)
                     cv2.circle(annotated_frame, (ballxy[i][0], ballxy[i][1]), 5, (0, 255, 0), -1)
-                    next_pos = predict_next_position((ballxy[i - 1][0], ballxy[i - 1][1]), (ballxy[i][0], ballxy[i][1]), frame_width, frame_height)
+                    next_pos = Predict.predict_next_position((ballxy[i - 1][0], ballxy[i - 1][1]), (ballxy[i][0], ballxy[i][1]), frame_width, frame_height)
                     cv2.circle(annotated_frame, (next_pos[0], next_pos[1]), 5, (0, 255, 0), -1)
 
     for ball_pos in ballxy:

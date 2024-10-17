@@ -1,14 +1,10 @@
-full-games
-frames
+__pycache__
+.pytest_cache
+.vscode
 models
-runs
-squash
-best.pt
-Untitled design.mp4
-main-games
-ns.pt
 trained-models
-*.mp4
-*.png
-misc
-*.json
+run
+output
+main.mp4
+best.pt
+ns.pt
