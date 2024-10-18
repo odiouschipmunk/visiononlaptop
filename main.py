@@ -6,11 +6,25 @@ from squash import Refrencepoints, Predict, Functions
 # Define the reference points in pixel coordinates (image)
 # These should be the coordinates of the reference points in the image
 #TODO: use embeddings to correctly find the different players
+import joblib
+ball_predict=joblib.load('ball_position_predictor.pkl')
 
 
 
-
-
+with open("output/ball.txt", "w") as f:
+    f.write("")
+with open("output/player1.txt", "w") as f:
+    f.write("")
+with open("output/player2.txt", "w") as f:
+    f.write("")
+with open("output/ball-xyn.txt", "w") as f:
+    f.write("")
+with open("output/read_ball.txt", "w") as f:
+    f.write("")
+with open("output/read_player1.txt", "w") as f:
+    f.write("")
+with open("output/read_player2.txt", "w") as f:
+    f.write("")
 # Load models
 pose_model = YOLO("models/yolo11m-pose.pt")
 ballmodel = YOLO("trained-models/g-ball2.pt")
@@ -170,13 +184,14 @@ while cap.isOpened():
 
     # frame count for debugging
     # frame 240-300 is good for occlusion player tracking testing
-    if frame_count <= 200 and frame_count % 2 != 0:
-        continue
+   
     running_frame+=1
     if running_frame>=500:
         updatedref=False
-
-
+    if frame_count<=10: continue
+    if frame_count>=250:
+        cap.release()
+        cv2.destroyAllWindows()
     if len(refrences1) !=0 and len(refrences2)!=0:
         avgp1ref=sum(refrences1)/len(refrences1)
         avgp2ref=sum(refrences2)/len(refrences2)
@@ -315,7 +330,15 @@ while cap.isOpened():
 
             with open("output/ball.txt", "a") as f:
                 f.write(
-                    f"Position(in pixels): {mainball.getloc()}\nDistance: {distance}\n"
+                    f"{mainball.getloc()[0]}\n{mainball.getloc()[1]}\n"
+                )
+            with open("output/read_ball.txt", "a") as f:
+                f.write(
+                    f"{mainball.getloc()}\n"
+                )
+            with open("output/ball-xyn.txt", "a") as f:
+                f.write(
+                    f"{mainball.getloc()[0]/frame_width}\n{mainball.getloc()[1]/frame_height}\n"
                 )
                 # print(f'Position(in pixels): {mainball.getloc()}\nDistance: {distance}\n')
                 Functions.drawmap(
@@ -426,7 +449,7 @@ while cap.isOpened():
                 else:
                     print(f'could not find player id for track id {track_id}')
                     continue
-
+                
 
                 # player refrence appending for maybe other stuff
                 #using track_id and not playerid so that it is definitely the correct player
@@ -734,27 +757,20 @@ while cap.isOpened():
                 1,
             )
             plt.figure(figsize=(10, 6))
-            plt2=plt
             plt.plot(p1distancesfromT, color='blue', label='P1 Distance from T')
-            plt2.plot(p2distancesfromT, color='red', label='P2 Distance from T')
+            plt.plot(p2distancesfromT, color='red', label='P2 Distance from T')
 
             # Add labels and title
             plt.xlabel('Time (frames)')
-            plt2.xlabel('Time (frames)')
             plt.ylabel('Distance from T')
-            plt2.ylabel('Distance from T')
             plt.title('Distance from T over Time')
-            plt2.title('Distance from T over Time')
             plt.legend()
-            plt2.legend()
 
             # Save the plot to a file
-            plt.savefig('output/distance_from_t_over_time1.png')
-            plt2.savefig('output/distance_from_t_over_time2.png')
+            plt.savefig('output/distance_from_t_over_time.png')
 
             # Close the plot to free up memory
             plt.close()
-            plt2.close()
     for ref in refrence_points:
         # cv2.circle(frame1, (x, y), 5, (0, 255, 0), -1)
         cv2.circle(annotated_frame, (ref[0], ref[1]), 5, (0, 255, 0), 2)
@@ -773,37 +789,31 @@ while cap.isOpened():
 """
 
 
+    # Generate player ankle heatmap
     if players.get(1).get_latest_pose() is not None and players.get(2).get_latest_pose() is not None:
-        player1anklex = players.get(1).get_latest_pose().xyn[0][16][0] * frame_width
-        player1ankley = players.get(1).get_latest_pose().xyn[0][16][1] * frame_height
-        player2anklex = players.get(2).get_latest_pose().xyn[0][16][0] * frame_width
-        player2ankley = players.get(2).get_latest_pose().xyn[0][16][1] * frame_height
+        player_ankles = [
+            (int(players.get(1).get_latest_pose().xyn[0][16][0] * frame_width),
+            int(players.get(1).get_latest_pose().xyn[0][16][1] * frame_height)),
+            (int(players.get(2).get_latest_pose().xyn[0][16][0] * frame_width),
+            int(players.get(2).get_latest_pose().xyn[0][16][1] * frame_height))
+        ]
 
-        # Draw points for player 1 (blue) and player 2 (red)
-        cv2.circle(heatmap_image, (int(player1anklex), int(player1ankley)), 5, (255, 0, 0), -1)  # Blue points for player 1
-        cv2.circle(heatmap_image, (int(player2anklex), int(player2ankley)), 5, (0, 0, 255), -1)  # Red points for player 2
+        # Draw points on the heatmap
+        for ankle in player_ankles:
+            cv2.circle(heatmap_image, ankle, 5, (255, 0, 0), -1)  # Blue points for Player 1
+            cv2.circle(heatmap_image, ankle, 5, (0, 0, 255), -1)  # Red points for Player 2
 
-        # Apply Gaussian blur to the heatmap to make it blurrier
-        blurred_heatmap_ankle = cv2.GaussianBlur(heatmap_image, (51, 51), 0)
+    blurred_heatmap_ankle = cv2.GaussianBlur(heatmap_image, (51, 51), 0)
 
-        # Normalize the heatmap to the range [0, 255]
-        blurred_heatmap = cv2.normalize(blurred_heatmap_ankle, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
+    # Normalize heatmap and apply color map in one step
+    normalized_heatmap = cv2.normalize(blurred_heatmap_ankle, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
+    heatmap_overlay = cv2.applyColorMap(normalized_heatmap, cv2.COLORMAP_JET)
 
-        # Convert the heatmap to uint8
-        blurred_heatmap = blurred_heatmap.astype(np.uint8)
+    # Combine with white image
+    combined_image = cv2.addWeighted(np.ones_like(heatmap_overlay) * 255, 0.5, heatmap_overlay, 0.5, 0)
 
-        # Apply color map to the heatmap
-        heatmap_overlay = cv2.applyColorMap(blurred_heatmap, cv2.COLORMAP_JET)
-
-        # Create a white image with the same dimensions as the heatmap
-        white_image = np.ones_like(heatmap_overlay) * 255
-
-        # Combine the images
-        combined_image = cv2.addWeighted(white_image, 0.5, heatmap_overlay, 0.5, 0)
-
-        # Save the combined image
-        cv2.imwrite('output/heatmap_ankle.png', combined_image)
-
+    # Save the combined image
+    cv2.imwrite('output/heatmap_ankle.png', combined_image)
     ballx=bally=0
     #ball stuff
     if mainball is not None and mainball.getlastpos() is not None and mainball.getlastpos() != (0, 0):
@@ -826,12 +836,35 @@ while cap.isOpened():
                     cv2.circle(annotated_frame, (ballxy[i][0], ballxy[i][1]), 5, (0, 255, 0), -1)
                     next_pos = Predict.predict_next_position((ballxy[i - 1][0], ballxy[i - 1][1]), (ballxy[i][0], ballxy[i][1]), frame_width, frame_height)
                     cv2.circle(annotated_frame, (next_pos[0], next_pos[1]), 5, (0, 255, 0), -1)
+                    #X=np.array([ballxy[i - 1][0], ballxy[i - 1][1]])
+                    #print(f'X: {X}')
+                    #model_next_pos=ball_predict(X).reshape(1,-1)
+                    #print(f'predicted position: {model_next_pos}')
+                    #cv2.circle(annotated_frame, (int(model_next_pos[0]), int(model_next_pos[1])), 5, (255, 0, 0), -1)
 
     for ball_pos in ballxy:
         if frame_count - ball_pos[2] < 7:
             #print(f'wrote to frame on line 1028 with coords: {ball_pos}')
             cv2.circle(annotated_frame, (ball_pos[0], ball_pos[1]), 5, (0, 255, 0), -1)
 
+
+    if players.get(1) and players.get(2) is not None and (players.get(1).get_last_x_poses(3) is not None and players.get(2).get_last_x_poses(3) is not None):
+        p1postemp = players.get(1).get_last_x_poses(3).xyn[0]
+        p2postemp = players.get(2).get_last_x_poses(3).xyn[0]
+        with open("output/read_player1.txt", "a") as f:
+            f.write(f'{p1postemp}\n')
+            f.close()
+        with open("output/read_player2.txt", "a") as f:
+            f.write(f'{p2postemp}\n')
+            f.close()
+        with open("output/player1.txt", "a") as f:
+            for pos in p1postemp:
+                f.write(f'{pos[0]}\n{pos[1]}\n')
+            f.close()
+        with open("output/player2.txt", "a") as f:
+            for pos in p2postemp:
+                f.write(f'{pos[0]}\n{pos[1]}\n')
+            f.close()
     ball_out.write(annotated_frame)
     out.write(annotated_frame)
     cv2.imshow("Annotated Frame", annotated_frame)
