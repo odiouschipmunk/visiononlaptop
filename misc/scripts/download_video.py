@@ -74,6 +74,6 @@ def download_videos(file_path, download_path):
                 print(f"Failed to download {url}: {e}")
 
 if __name__ == "__main__":
-    file_path = 'full-games.txt'
-    download_path = 'full-games'
+    file_path = 'misc/scripts/temp_video_file.txt'
+    download_path = '/'
     download_videos(file_path, download_path)
