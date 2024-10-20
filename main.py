@@ -953,10 +953,10 @@ def main():
                 f.close()
         if running_frame%3==0:
             write()
-        
+      
         #most_likely_ballframe=[int(future_predict[0][1]*frame_width), int(future_predict[0][1]*frame_height)]
         #ball_frame=frame[most_likely_ballframe[0]-50:most_likely_ballframe[0]+50, most_likely_ballframe[1]-50:most_likely_ballframe[1]+50]
-        
+        #im aweseome
         ball_out.write(annotated_frame)
         out.write(annotated_frame)
         cv2.imshow("Annotated Frame", annotated_frame)
