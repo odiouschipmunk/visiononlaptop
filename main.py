@@ -14,12 +14,12 @@ def main():
     from squash.Player import Player
     from PIL import Image
     from skimage.metrics import structural_similarity as ssim_metric
-    
+
     print("imported all")
     # Define the reference points in pixel coordinates (image)
     # These should be the coordinates of the reference points in the image
     # TODO: use embeddings to correctly find the different players
-    ball_predict = tf.keras.models.load_model("ball_position_model.keras")
+    ball_predict = tf.keras.models.load_model("ball_position_model(10000).keras")
 
     def load_data(file_path):
         """
@@ -70,7 +70,7 @@ def main():
     last_frame = []
     for i in range(1, 3):
         occlusion_times[i] = 0
-    future_predict=None
+    future_predict = None
     # Get video dimensions
 
     max_players = 2
@@ -189,8 +189,6 @@ def main():
         if frame_count >= 10000:
             cap.release()
             cv2.destroyAllWindows()
-        if frame_count < 10:
-            continue
         if len(refrences1) != 0 and len(refrences2) != 0:
             avgp1ref = sum(refrences1) / len(refrences1)
             avgp2ref = sum(refrences2) / len(refrences2)
@@ -332,7 +330,6 @@ def main():
                     avg_x - mainball.getlastpos()[0], avg_y - mainball.getlastpos()[1]
                 )
 
-            
                 # print(f'Position(in pixels): {mainball.getloc()}\nDistance: {distance}\n')
                 Functions.drawmap(
                     mainball.getloc()[0],
@@ -646,7 +643,7 @@ def main():
                     p1_right_ankle_y = int(
                         players.get(1).get_latest_pose().xyn[0][15][1] * frame_height
                     )
-                except Exception as e:
+                except Exception:
                     p1_left_ankle_x = p1_left_ankle_y = p1_right_ankle_x = (
                         p1_right_ankle_y
                     ) = 0
@@ -663,7 +660,7 @@ def main():
                     p2_right_ankle_y = int(
                         players.get(2).get_latest_pose().xyn[0][15][1] * frame_height
                     )
-                except Exception as e:
+                except Exception:
                     p2_left_ankle_x = p2_left_ankle_y = p2_right_ankle_x = (
                         p2_right_ankle_y
                     ) = 0
@@ -814,7 +811,7 @@ def main():
         )
 
         # Save the combined image
-        #cv2.imwrite("output/heatmap_ankle.png", combined_image)
+        # cv2.imwrite("output/heatmap_ankle.png", combined_image)
         ballx = bally = 0
         # ball stuff
         if (
@@ -865,13 +862,13 @@ def main():
                             frame_width,
                             frame_height,
                         )
-                        cv2.circle(
-                            annotated_frame,
-                            (next_pos[0], next_pos[1]),
-                            5,
-                            (0, 255, 0),
-                            -1,
-                        )
+                        #cv2.circle(
+                        #    annotated_frame,
+                        #    (next_pos[0], next_pos[1]),
+                        #    5,
+                        #    (0, 255, 0),
+                        #    -1,
+                        #)
 
         for ball_pos in ballxy:
             if frame_count - ball_pos[2] < 7:
@@ -923,7 +920,7 @@ def main():
         ):
             p1postemp = players.get(1).get_last_x_poses(3).xyn[0]
             p2postemp = players.get(2).get_last_x_poses(3).xyn[0]
-            
+
         def write():
             with open("output/read_player1.txt", "a") as f:
                 f.write(f"{p1postemp}\n")
@@ -940,7 +937,7 @@ def main():
                     f.write(f"{pos[0]}\n{pos[1]}\n")
                 f.close()
             with open("output/ball.txt", "a") as f:
-                    f.write(f"{mainball.getloc()[0]}\n{mainball.getloc()[1]}\n")
+                f.write(f"{mainball.getloc()[0]}\n{mainball.getloc()[1]}\n")
             with open("output/read_ball.txt", "a") as f:
                 f.write(f"{mainball.getloc()}\n")
             with open("output/ball-xyn.txt", "a") as f:
@@ -948,15 +945,16 @@ def main():
                     f"{mainball.getloc()[0]/frame_width}\n{mainball.getloc()[1]/frame_height}\n"
                 )
             with open("output/final.txt", "a") as f:
-                text=f"Frame: {running_frame}\nPlayer 1: {p1postemp}\nPlayer 2: {p2postemp}\nBall: {mainball.getloc()}"
+                text = f"Frame: {running_frame}\nPlayer 1: {p1postemp}\nPlayer 2: {p2postemp}\nBall: {mainball.getloc()}"
                 f.write(f"{text}\n")
                 f.close()
-        if running_frame%3==0:
+            # print(f'wrote!')
+        if running_frame % 3 == 0:
             write()
-      
-        #most_likely_ballframe=[int(future_predict[0][1]*frame_width), int(future_predict[0][1]*frame_height)]
-        #ball_frame=frame[most_likely_ballframe[0]-50:most_likely_ballframe[0]+50, most_likely_ballframe[1]-50:most_likely_ballframe[1]+50]
-        #im aweseome
+
+        # most_likely_ballframe=[int(future_predict[0][1]*frame_width), int(future_predict[0][1]*frame_height)]
+        # ball_frame=frame[most_likely_ballframe[0]-50:most_likely_ballframe[0]+50, most_likely_ballframe[1]-50:most_likely_ballframe[1]+50]
+        # im aweseome
         ball_out.write(annotated_frame)
         out.write(annotated_frame)
         cv2.imshow("Annotated Frame", annotated_frame)

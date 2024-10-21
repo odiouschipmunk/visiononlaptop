@@ -8,3 +8,7 @@ output
 main.mp4
 best.pt
 ns.pt
+venv
+co-tracker
+saved_videos
+cropped.mp4
