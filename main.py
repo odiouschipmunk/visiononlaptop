@@ -14,7 +14,7 @@ def main():
     from squash.Player import Player
     from PIL import Image
     from skimage.metrics import structural_similarity as ssim_metric
-
+    ball_future_pos=None
     print("imported all")
     # Define the reference points in pixel coordinates (image)
     # These should be the coordinates of the reference points in the image
@@ -113,6 +113,7 @@ def main():
     diff = []
     diffTrack = False
     updateref = True
+    future_ball=None
     """
     def findRef(img):
         return cv2.
@@ -183,7 +184,8 @@ def main():
 
         # frame count for debugging
         # frame 240-300 is good for occlusion player tracking testing
-
+        if frame_count<15:
+            continue
         if running_frame >= 500:
             updatedref = False
         if frame_count >= 10000:
@@ -232,6 +234,19 @@ def main():
 
         # Pose and ball detection
         ball = ballmodel(frame)
+        if ball_future_pos is not None:
+            enclosed_frame=frame.copy()
+            print(f'got ball_future_pos: {ball_future_pos}')
+            #create a small subset of the frame to only show the ball area give or take 100 pixels
+            y_min = max(int(ball_future_pos[0][1] * frame_height) - 100, 0)
+            y_max = min(int(ball_future_pos[0][1] * frame_height) + 100, frame_height)
+            x_min = max(int(ball_future_pos[0][0] * frame_width) - 100, 0)
+            x_max = min(int(ball_future_pos[0][0] * frame_width) + 100, frame_width)
+            enclosed_frame=enclosed_frame[y_min:y_max, x_min:x_max]
+            future_ball=ballmodel(enclosed_frame)
+            print(f'future ball: {future_ball}')
+            print(f'normal ball: {ball}')
+            cv2.imshow('future ball', enclosed_frame)
         pose_results = pose_model(frame)
         # racket_results=racketmodel(frame)
         # only plot the top 2 confs
@@ -341,6 +356,8 @@ def main():
 
         """
         FRAMEPOSE
+        todo: make framepose another funciton with zipped variables and return it
+        
         """
 
         track_results = pose_model.track(frame, persist=True)
@@ -910,6 +927,7 @@ def main():
                 (255, 0, 0),
                 -1,
             )
+            ball_future_pos=future_predict
         if (
             players.get(1)
             and players.get(2) is not None
@@ -949,7 +967,7 @@ def main():
                 f.write(f"{text}\n")
                 f.close()
             # print(f'wrote!')
-        if running_frame % 3 == 0:
+        if running_frame % 2 == 0 and running_frame>=15:
             write()
 
         # most_likely_ballframe=[int(future_predict[0][1]*frame_width), int(future_predict[0][1]*frame_height)]
