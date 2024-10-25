@@ -173,7 +173,7 @@ def main():
             f"Could not find heatmap overlay image at {heatmap_overlay_path}"
         )
     heatmap_ankle = np.zeros_like(heatmap_image, dtype=np.float32)
-
+    biggestx=biggesty=smallestx=smallesty=0
     ballxy = []
 
     running_frame = 0
@@ -208,6 +208,26 @@ def main():
             print(f"Cosine Similarity p1: {similarity_p1}")
             print(f"Cosine Similarity p2: {similarity_p2}")
         """
+        # if refrence_points is not None:
+        #     print(f'width: {refrence_points[2][0]-refrence_points[0][0]}')
+        #     print(f'height: {refrence_points[0][1]-refrence_points[3][1]}')
+        #     print(f'refrence points: {refrence_points}')
+        #     if biggestx==0 or biggesty==0 or smallestx==0 or smallesty==0:
+        #         for refrence in refrence_points:
+        #             if refrence[0]<smallestx:
+        #                 smallestx=refrence[0]
+        #             if refrence[1]<smallesty:
+        #                 smallesty=refrence[1]
+        #             if refrence[0]>biggestx:
+        #                 biggestx=refrence[0]
+        #             if refrence[1]>biggesty:
+        #                 biggesty=refrence[1]
+        #     alteredframe=frame[smallesty:biggesty, smallestx:biggestx]
+        #     #cv2.imshow("frame", alteredframe)
+        #     frame=alteredframe
+        for refrence in refrence_points:
+            cv2.circle(frame, refrence, 5, (0, 255, 0), -1)
+
         if running_frame == 1:
             print("frame 1")
             courtref = np.int64(
@@ -245,8 +265,6 @@ def main():
         # Check if keypoints exist and are not empty
         # print(pose_results)
         ballframe = frame.copy()
-        for refrence in refrence_points:
-            cv2.circle(frame, refrence, 5, (0, 255, 0), -1)
 
         highestconf = 0
         x1 = x2 = y1 = y2 = 0
