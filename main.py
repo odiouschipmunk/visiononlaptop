@@ -137,26 +137,29 @@ def main():
     # reference[0] is top left,
     # reference[1] is top right
     # reference[2] is bottom right
-    # reference[3] is bottom left
+    # reference[3] is bottom left [0,0,0]
     # reference[4] is T
     # reference[5] is left bottom of service box
     # reference[6] is right bottom of service box
-    # reference[7] is left of service line
-    # reference[8] is right of service line
-    # reference[9] is left of the top line of the front court
-    # reference[10] is right of the top line of the front court
+    # references[7] is left of tin
+    # references[8] is right of tin
+    # reference[9] is left of service line
+    # reference[10] is right of service line
+    # reference[11] is left of the top line of the front court
+    # reference[12] is right of the top line of the front court
     reference_points_3d = [
-        [0, 5.64, 0],  # Top-left corner
-        [6.4, 5.64, 0],  # Top-right corner
-        [6.4, 0, 9.75],  # Bottom-right corner
-        [0, 0, 9.75],  # Bottom-left corner
-        [3.2, 0, 5.44],  # "T" point
-        [1.6, 0, 5.44],  # Left bottom of the service box
-        [4.8, 0, 5.44],  # Right bottom of the service box
-        [1.6, 1.78, 0],  # Left of the service line
-        [4.8, 1.78, 0],  # Right of the service line
-        [0, 4.57, 0],  # Left of the top line of the front court
-        [6.4, 4.57, 0],  # Right of the top line of the front court
+        [0, 0, 9.75],  # Top-left corner
+        [6.4, 0, 9.75],  # Top-right corner
+        [6.4, 0, 0],  # Bottom-right corner
+        [0, 0, 0],  # Bottom-left corner
+        [3.2, 0, 4.31],  # "T" point
+        [0, 0, 2.71],  # Left bottom of the service box
+        [6.4, 0, 2.71],  # Right bottom of the service box
+        [0,0.53,9.75],
+        [0, 1.83, 9.75],  # Left of the service line
+        [4.8, 1.78, 9.75],  # Right of the service line
+        [0, 4.57, 9.75],  # Left of the top line of the front court
+        [6.4, 4.57, 9.75],  # Right of the top line of the front court
     ]
     homography = Functions.generate_homography(reference_points, reference_points_3d)
     np.zeros((frame_height, frame_width), dtype=np.float32)
