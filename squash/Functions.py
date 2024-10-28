@@ -1,5 +1,6 @@
 import numpy as np
 import clip, torch
+import cv2
 def find_match_2d_array(array, x):
     for i in range(len(array)):
         if array[i][0] == x:
@@ -77,3 +78,122 @@ def findLast(i, otherTrackIds):
         if otherTrackIds[it][1] == i:
             possibleits.append(it)
     return possibleits[-1]
+
+def pixel_to_3d(pixel_point, pixel_reference, reference_points_3d):
+    """
+    Maps a single 2D pixel coordinate to a 3D position based on reference points.
+
+    Parameters:
+        pixel_point (list): Single [x, y] pixel coordinate to map.
+        pixel_reference (list): List of [x, y] reference points in pixels.
+        reference_points_3d (list): List of [x, y, z] reference points in 3D space.
+
+    Returns:
+        list: Mapped 3D coordinates in the form [x, y, z].
+    """
+    # Convert 2D reference points and 3D points to NumPy arrays
+    pixel_reference_np = np.array(pixel_reference, dtype=np.float32)
+    reference_points_3d_np = np.array(reference_points_3d, dtype=np.float32)
+
+    # Extract only the x and y values from the 3D reference points for homography calculation
+    reference_points_2d = reference_points_3d_np[:, :2]
+
+    # Calculate the homography matrix from 2D pixel reference to 2D real-world reference (ignoring z)
+    H, _ = cv2.findHomography(pixel_reference_np, reference_points_2d)
+
+    # Ensure pixel_point is in homogeneous coordinates [x, y, 1]
+    pixel_point_homogeneous = np.array([pixel_point[0], pixel_point[1], 1], dtype=np.float32)
+
+    # Apply the homography matrix to get a 2D point in real-world space
+    real_world_2d = np.dot(H, pixel_point_homogeneous)
+    real_world_2d /= real_world_2d[2]  # Normalize to make it [x, y, 1]
+
+    # Now interpolate the z-coordinate based on distances
+    # Calculate weights based on the nearest reference points in the 2D plane
+    distances = np.linalg.norm(reference_points_2d - real_world_2d[:2], axis=1)
+    weights = 1 / (distances + 1e-5)  # Avoid division by zero
+    z_mapped = np.dot(weights, reference_points_3d_np[:, 2]) / np.sum(weights)
+
+    # Combine the 2D mapped point with interpolated z to get the 3D position
+    mapped_3d_point = [real_world_2d[0], real_world_2d[1], z_mapped]
+
+    return mapped_3d_point
+
+
+
+
+def transform_pixel_to_real_world(pixel_points, H):
+    """
+    Transform pixel points to real-world coordinates using the homography matrix.
+
+    Parameters:
+        pixel_points (list): List of [x, y] pixel coordinates to transform.
+        H (np.array): Homography matrix.
+
+    Returns:
+        list: Transformed real-world coordinates in the form [x, y].
+    """
+    # Convert pixel points to homogeneous coordinates for matrix multiplication
+    pixel_points_homogeneous = np.append(pixel_points, 1)
+
+    # Apply the homography matrix to get a 2D point in real-world space
+    real_world_2d = np.dot(H, pixel_points_homogeneous)
+    real_world_2d /= real_world_2d[2]  # Normalize
+
+    return real_world_2d[:2]
+
+def display_player_positions(rlworldp1, rlworldp2):
+    """
+    Display the player positions on another screen using OpenCV.
+
+    Parameters:
+        rlworldp1 (list): Real-world coordinates of player 1.
+        rlworldp2 (list): Real-world coordinates of player 2.
+
+    Returns:
+        None
+    """
+    # Create a blank image
+    display_image = np.ones((500, 500, 3), dtype=np.uint8) * 255
+
+    # Draw player positions
+    cv2.circle(display_image, (int(rlworldp1[0]), int(rlworldp1[1])), 5, (255, 0, 0), -1)  # Blue for player 1
+    cv2.circle(display_image, (int(rlworldp2[0]), int(rlworldp2[1])), 5, (0, 0, 255), -1)  # Red for player 2
+
+    # Display the image
+    cv2.imshow("Player Positions", display_image)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+
+#function to determine if an array has a false positive in the last threshold frames
+def is_ball_false_pos(ball_pos, threshold=5):
+    if len(ball_pos) < threshold:
+        return False
+    #assuming the ball_pos array is formatted as [[x1,y1,frame1],[x2,y2,frame2],...]
+    #sort the array by frame number
+    ball_pos.sort(key=lambda x: x[2])
+    #get the last threshold positions
+    thresh_pos=ball_pos[-threshold:]
+    #go through each position and check if the x and y values are the same
+    for i in range(1,threshold):
+        for j in range(0, i):
+            if i==j:
+                continue
+            if thresh_pos[i][0] == thresh_pos[j][0] and thresh_pos[i][1] == thresh_pos[j][1]:
+                return True
+    return False
+
+#function to generate homography based on refrencepoints in the video in pixel[x,y] format and also real world refrence points in the form of [x,y,z] in meters
+def generateHomography(pxrefrence_points, rlrefrence_points):
+    # Convert pixel reference points and real-world points to NumPy arrays
+    pxrefrence_points_np = np.array(pxrefrence_points, dtype=np.float32)
+    rlrefrence_points_np = np.array(rlrefrence_points, dtype=np.float32)
+
+    # Extract only the x and y values from the real-world reference points for homography calculation
+    rlrefrence_points_2d = rlrefrence_points_np[:, :2]
+
+    # Calculate the homography matrix from pixel reference to real-world reference
+    H, _ = cv2.findHomography(pxrefrence_points_np, rlrefrence_points_2d)
+
+    return H

@@ -69,8 +69,8 @@ def main():
     cap = cv2.VideoCapture(path)
     with open("output/final.txt", "a") as f:
         f.write(f"You are analyzing video: {path}.\nPlayer keypoints will be structured as such: 0: Nose 1: Left Eye 2: Right Eye 3: Left Ear 4: Right Ear 5: Left Shoulder 6: Right Shoulder 7: Left Elbow 8: Right Elbow 9: Left Wrist 10: Right Wrist 11: Left Hip 12: Right Hip 13: Left Knee 14: Right Knee 15: Left Ankle 16: Right Ankle.\nIf a keypoint is (0,0), then it has not beeen detected and should be deemed irrelevant. Here is how the output will be structured: \nFrame count\nPlayer 1 Keypoints\nPlayer 2 Keypoints\n Ball Position.\n\n")
-    frame_width = 1920
-    frame_height = 1080
+    frame_width = 640
+    frame_height = 360
     players = {}
     courtref = 0
     occlusion_times = {}
@@ -191,7 +191,7 @@ def main():
 
     ballxy = []
 
-    homography=Functions.calculate_homography(refrence_points, reference_points_3d)
+    #homography=Functions.calculate_homography(refrence_points, reference_points_3d)
     
     running_frame = 0
     print("started video input")
@@ -298,6 +298,9 @@ def main():
         x1 = x2 = y1 = y2 = 0
         # Ball detection
         # make it so that if it detects the ball in the same place multiple times it takes that out
+        if Functions.is_ball_false_pos(past_ball_pos):
+            ball_false_pos.append(past_ball_pos[-1])
+        print(f'is ball false pos is : {str(Functions.is_ball_false_pos(past_ball_pos))}')
         label = ""
         for box in ball[0].boxes:
             coords = box.xyxy[0] if len(box.xyxy) == 1 else box.xyxy
@@ -306,6 +309,8 @@ def main():
             confidence = float(box.conf)  # Convert tensor to float
             avgxtemp = int((x1temp + x2temp) / 2)
             avgytemp = int((y1temp + y2temp) / 2)
+            if avgxtemp in ball_false_pos[0] and avgytemp in ball_false_pos[1]:
+                continue
             """
             if abs(avgxtemp-363)<10 and abs(avgytemp-72)<10:
                 #false positive near the "V"
@@ -959,10 +964,10 @@ def main():
             rlp1postemp = [players.get(1).get_last_x_poses(3).xyn[0][16][0]*frame_width, players.get(1).get_last_x_poses(3).xyn[0][16][1]*frame_height]
             rlp2postemp = [players.get(2).get_last_x_poses(3).xyn[0][16][0]*frame_width, players.get(2).get_last_x_poses(3).xyn[0][16][1]*frame_height]
             #print(f"Player 1: {rlp1postemp}")
-            rlworldp1=Functions.pixel_to_3d(rlp1postemp, pixel_reference=refrence_points, reference_points_3d=reference_points_3d)
-            rlworldp2=Functions.pixel_to_3d(rlp2postemp, pixel_reference=refrence_points, reference_points_3d=reference_points_3d)
-            homop1=Functions.transform_pixel_to_real_world(rlp1postemp, homography)
-            homop2=Functions.transform_pixel_to_real_world(rlp2postemp, homography)
+            #rlworldp1=Functions.pixel_to_3d(rlp1postemp, pixel_reference=refrence_points, reference_points_3d=reference_points_3d)
+            #rlworldp2=Functions.pixel_to_3d(rlp2postemp, pixel_reference=refrence_points, reference_points_3d=reference_points_3d)
+            #homop1=Functions.transform_pixel_to_real_world(rlp1postemp, homography)
+            #homop2=Functions.transform_pixel_to_real_world(rlp2postemp, homography)
             
             # text5=f"Player 1: {rlworldp1}"
             # text6=f"Player 2: {rlworldp2}"
@@ -1038,7 +1043,10 @@ def main():
             '''
             # print(f'wrote!')
         if running_frame % 3 == 0:
-            write()
+            try:
+                write()
+            except Exception as e:
+                print(f'could not write to file, most likely because players were not detected yet: {e}')
 
         # most_likely_ballframe=[int(future_predict[0][1]*frame_width), int(future_predict[0][1]*frame_height)]
         # ball_frame=frame[most_likely_ballframe[0]-50:most_likely_ballframe[0]+50, most_likely_ballframe[1]-50:most_likely_ballframe[1]+50]
