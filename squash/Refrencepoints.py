@@ -1,5 +1,5 @@
 import cv2, json, os
-def get_refrence_points(path, frame_width, frame_height):
+def get_refrence_points(path, frame_width, frame_height, refrence_points):
     # Mouse callback function to capture click events
     def click_event(event, x, y, flags, params):
         if event == cv2.EVENT_LBUTTONDOWN:
