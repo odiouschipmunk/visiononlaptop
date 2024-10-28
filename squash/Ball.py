@@ -1,4 +1,3 @@
-import math
 class Ball:
     def __init__(self, x, y, a, s):
         self.xcoord=x

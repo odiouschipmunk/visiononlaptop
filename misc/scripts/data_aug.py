@@ -1,6 +1,4 @@
-import torch
 import torchvision.transforms as A
-from torchvision import tv_tensors as ToTensorV2
 import cv2
 import os
 

@@ -3,6 +3,6 @@
 # print(str(Functions.is_ball_false_pos(normal_ball_pos))) # should be false
 # false_pos=[[458,192,400], [458,192,244], [458,192,245], [458,192,246], [458,192,248], [458,192,250], [458,192,254], [458,192,255]]
 # print(str(Functions.is_ball_false_pos(false_pos))) # should be true
-from squash import Refrencepoints
-refrence_points=Refrencepoints.get_refrence_points('random.mp4', 640, 360)
+from squash import Referencepoints
+refrence_points=Referencepoints.get_refrence_points('random.mp4', 640, 360)
 print(refrence_points)

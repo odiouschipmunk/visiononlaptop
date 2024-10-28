@@ -1,5 +1,4 @@
 import numpy as np
-import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv2D, Flatten, Dense
 from sklearn.model_selection import train_test_split
@@ -72,7 +71,7 @@ def main():
     X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.1, random_state=42)
     
     # Train the CNN model
-    history = model.fit(X_train, y_train, epochs=1000, validation_data=(X_val, y_val), batch_size=16)
+    model.fit(X_train, y_train, epochs=1000, validation_data=(X_val, y_val), batch_size=16)
     # Evaluate on validation set
     val_loss = model.evaluate(X_val, y_val)
     print(f'Validation Loss: {val_loss}')

@@ -3,7 +3,6 @@ import mediapipe as mp
 import os
 import torch
 import warnings
-from tqdm import tqdm
 # Suppress specific FutureWarnings
 warnings.filterwarnings("ignore", category=FutureWarning, module="torch.cuda.amp")
 
