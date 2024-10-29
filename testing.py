@@ -1,8 +1,29 @@
-# from squash import Functions
-# normal_ball_pos=[ [458, 192, 243], [461, 203, 244], [465, 214, 245], [469, 226, 246], [473, 239, 247], [477, 255, 248]]
-# print(str(Functions.is_ball_false_pos(normal_ball_pos))) # should be false
-# false_pos=[[458,192,400], [458,192,244], [458,192,245], [458,192,246], [458,192,248], [458,192,250], [458,192,254], [458,192,255]]
-# print(str(Functions.is_ball_false_pos(false_pos))) # should be true
-from squash import Referencepoints
-refrence_points=Referencepoints.get_refrence_points('random.mp4', 640, 360)
-print(refrence_points)
+import requests
+
+import torch
+from PIL import Image
+from transformers import AutoProcessor, AutoModelForZeroShotObjectDetection
+
+model_id = "IDEA-Research/grounding-dino-tiny"
+device = "cpu"
+
+processor = AutoProcessor.from_pretrained(model_id)
+model = AutoModelForZeroShotObjectDetection.from_pretrained(model_id).to(device)
+
+image_url = "http://images.cocodataset.org/val2017/000000039769.jpg"
+image = Image.open(requests.get(image_url, stream=True).raw)
+# Check for cats and remote controls
+text = "a cat. a remote control."
+
+inputs = processor(images=image, text=text, return_tensors="pt").to(device)
+with torch.no_grad():
+    outputs = model(**inputs)
+
+results = processor.post_process_grounded_object_detection(
+    outputs,
+    inputs.input_ids,
+    box_threshold=0.4,
+    text_threshold=0.3,
+    target_sizes=[image.size[::-1]]
+)
+print(results)
