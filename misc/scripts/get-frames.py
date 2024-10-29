@@ -2,7 +2,7 @@ import os
 import cv2
 import random
 from tqdm import tqdm
-def extract_random_frames(video_path, output_folder, num_frames=10000):
+def extract_random_frames(video_path, output_folder, num_frames=1000):
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
     
@@ -36,6 +36,6 @@ def process_videos(videos_folder, output_folder, num_frames=1000):
             extract_random_frames(video_path, output_folder, num_frames)
 
 if __name__ == "__main__":
-    videos_folder = 'full-games'
-    output_folder = 'frames'
+    videos_folder = 'black_ball_videos'
+    output_folder = 'black_ball_frames'
     process_videos(videos_folder, output_folder)
