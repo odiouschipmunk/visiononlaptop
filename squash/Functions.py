@@ -185,6 +185,34 @@ def is_ball_false_pos(ball_pos, threshold=5):
                 return True
     return False
 
+def validate_reference_points(px_points, rl_points):
+
+    """
+    Validate reference points for homography calculation.
+    
+    Parameters:
+        px_points: List of pixel coordinates [[x, y], ...]
+        rl_points: List of real-world coordinates [[X, Y, Z], ...] or [[X, Y], ...]
+        
+    Returns:
+        Tuple[bool, str]: (is_valid, error_message)
+    """
+    if len(px_points) != len(rl_points):
+        return False, "Number of pixel and real-world points must match"
+        
+    if len(px_points) < 4:
+        return False, "At least 4 point pairs are required for homography calculation"
+        
+    # Check pixel points format
+    if not all(len(p) == 2 for p in px_points):
+        return False, "Pixel points must be 2D coordinates [x, y]"
+        
+    # Check real-world points format
+    if not all(len(p) in [2, 3] for p in rl_points):
+        return False, "Real-world points must be either 2D [X, Y] or 3D [X, Y, Z] coordinates"
+        
+    return True, ""
+
 #function to generate homography based on referencepoints in the video in pixel[x,y] format and also real world reference points in the form of [x,y,z] in meters
 def generate_homography(px_reference_points, rl_reference_points):
     """
@@ -244,3 +272,36 @@ def pixel_to_3d(pixel_point, H, rl_reference_points):
     interpolated_z = np.dot(weights, rl_reference_points_np[:, 2])
 
     return [round(interpolated_x, 3), round(interpolated_y, 3), round(interpolated_z, 3)]
+
+
+def apply_homography(H, points, inverse=False):
+
+    """
+    Apply homography transformation to a set of points.
+    
+    Parameters:
+        H: 3x3 homography matrix
+        points: List of points to transform [[x, y], ...]
+        inverse: If True, applies inverse transformation
+        
+    Returns:
+        np.ndarray: Transformed points
+    """
+    try:
+        points = np.array(points, dtype=np.float32)
+        if points.ndim == 1:
+            points = points.reshape(1, 2)
+        
+        if inverse:
+            H = np.linalg.inv(H)
+        
+        # Reshape points to Nx1x2 format required by cv2.perspectiveTransform
+        points_reshaped = points.reshape(-1, 1, 2)
+        
+        # Apply transformation
+        transformed_points = cv2.perspectiveTransform(points_reshaped, H)
+        
+        return transformed_points.reshape(-1, 2)
+        
+    except Exception as e:
+        raise ValueError(f"Error in apply_homography: {str(e)}")

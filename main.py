@@ -148,18 +148,19 @@ def main():
     # reference[11] is left of the top line of the front court
     # reference[12] is right of the top line of the front court
     reference_points_3d = [
-        [0, 0, 9.75],  # Top-left corner
-        [6.4, 0, 9.75],  # Top-right corner
-        [6.4, 0, 0],  # Bottom-right corner
-        [0, 0, 0],  # Bottom-left corner
-        [3.2, 0, 4.31],  # "T" point
-        [0, 0, 2.71],  # Left bottom of the service box
-        [6.4, 0, 2.71],  # Right bottom of the service box
-        [0,0.53,9.75],
-        [0, 1.83, 9.75],  # Left of the service line
-        [4.8, 1.78, 9.75],  # Right of the service line
-        [0, 4.57, 9.75],  # Left of the top line of the front court
-        [6.4, 4.57, 9.75],  # Right of the top line of the front court
+        [0, 0, 9.75],  # Top-left corner, 1
+        [6.4, 0, 9.75],  # Top-right corner, 2
+        [6.4, 0, 0],  # Bottom-right corner, 3
+        [0, 0, 0],  # Bottom-left corner, 4
+        [3.2, 0, 4.26],  # "T" point, 5
+        [0, 0, 2.66],  # Left bottom of the service box, 6
+        [6.4, 0, 2.66],  # Right bottom of the service box, 7
+        [0, 0.48, 9.75], #left of tin, 8
+        [6.4, 0.48, 9.75], #right of tin, 9
+        [0, 1.83, 9.75],  # Left of the service line, 10
+        [4.8, 1.83, 9.75],  # Right of the service line, 11
+        [0, 4.57, 9.75],  # Left of the top line of the front court, 12
+        [6.4, 4.57, 9.75],  # Right of the top line of the front court, 13
     ]
     homography = Functions.generate_homography(reference_points, reference_points_3d)
     np.zeros((frame_height, frame_width), dtype=np.float32)
@@ -179,6 +180,8 @@ def main():
     running_frame = 0
     print("started video input")
     int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    
+    Functions.validate_reference_points(reference_points, reference_points_3d)
     while cap.isOpened():
         success, frame = cap.read()
 
