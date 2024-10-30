@@ -305,3 +305,8 @@ def apply_homography(H, points, inverse=False):
         
     except Exception as e:
         raise ValueError(f"Error in apply_homography: {str(e)}")
+
+def sum_pixels_in_bbox(frame, bbox):
+    x, y, w, h = bbox
+    roi = frame[int(y) : int(y + h), int(x) : int(x + w)]
+    return np.sum(roi, dtype=np.int64)
