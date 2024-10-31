@@ -58,11 +58,11 @@ def main():
         f.write("")
     # Load models
     pose_model = YOLO("models/yolo11m-pose.pt")
-    ballmodel = YOLO("trained-models/g-ball2.pt")
+    ballmodel = YOLO("black_ball_v1(640and15epoc).pt")
     # racketmodel=YOLO('trained-models/squash-racket.pt')
     # courtmodel=YOLO('trained-models/court-key!.pt')
     # Video file path
-    path = "main.mp4"
+    path = "black_ball_videos/3.mp4"
     print("loaded models")
     ballvideopath = "output/balltracking.mp4"
     cap = cv2.VideoCapture(path)
@@ -90,8 +90,8 @@ def main():
     fps = 25  # Frames per second
     out = cv2.VideoWriter(output_path, fourcc, fps, (frame_width, frame_height))
     ball_out = cv2.VideoWriter(ballvideopath, fourcc, fps, (frame_width, frame_height))
-
-
+    detections=[]
+    #in the form of ball, [pose], track
     # Create a blank canvas for heatmap based on video resolution
 
     mainball = Ball(0, 0, 0, 0)
@@ -280,6 +280,7 @@ def main():
 
         # Pose and ball detection
         ball = ballmodel(frame)
+        detections.append(ball)
         # pose_results = pose_model(frame)
         # racket_results=racketmodel(frame)
         # only plot the top 2 confs
