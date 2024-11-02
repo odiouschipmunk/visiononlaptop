@@ -1,55 +1,69 @@
-import requests
+import json
+import numpy as np
+import tensorflow as tf
+from squash.action_classifier import extract_features
 
-import torch
-from PIL import Image
-from transformers import AutoProcessor, AutoModelForZeroShotObjectDetection
-
-model_id = "IDEA-Research/grounding-dino-tiny"
-device = "cpu"
-
-processor = AutoProcessor.from_pretrained(model_id)
-model = AutoModelForZeroShotObjectDetection.from_pretrained(model_id).to(device)
-
-# image=Image.open("download_wikipedia_squash.jpg")
-# # Check for cats and remote controls
-# text = "a black rubber squash ball."
-
-# inputs = processor(images=image, text=text, return_tensors="pt").to(device)
-# with torch.no_grad():
-#     outputs = model(**inputs)
-
-# results = processor.post_process_grounded_object_detection(
-#     outputs,
-#     inputs.input_ids,
-#     box_threshold=0.4,
-#     text_threshold=0.3,
-#     target_sizes=[image.size[::-1]]
-# )
-# print(results)
-from tqdm import tqdm
-import os
-import cv2
-def get_annotations(image_folder, output_folder, text="a small black rubber squash ball."):
-    for filename in tqdm(os.listdir(image_folder)):
-        image=Image.open(image_folder+'/'+filename)
-        inputs=processor(images=image, text=text, return_tensors="pt").to("cpu")
-        with torch.no_grad():
-            outputs=model(**inputs)
-        results=processor.post_process_grounded_object_detection(
-            outputs,
-            inputs.input_ids,
-            box_threshold=0.4,
-            text_threshold=0.3, 
-            target_sizes=[image.size[::-1]]
-        )
-        print(f'results: {results}')
-        annotated_image=image
-        print(f'len(results): {len(results)}')
-        print(f'len(results[0]): {len(results[0])}')
-        print(f'len(results[\'boxes\']): {len(results[0]['boxes'])}')
-        print(f'results[0][\'boxes\'][0]: {results[0]['boxes'][0]}')
-        print(f'result[0][boxes][0][0]: {results[0]['boxes'][0][0]}')
-        cv2.rectangle(annotated_image, (int(results[0]['boxes'][0][0]), int(results[0]['boxes'][0][1])), (int(results[0]['boxes'][0][2]), int(results[0]['boxes'][0][3])), (0,255,0), 5)
-        cv2.imshow(image)
+def classify_actions_in_file(json_file, model_path, sequence_length=30):
+    """Classify actions in a JSON file containing squash game data"""
+    
+    # Load the model
+    model = tf.keras.models.load_model(model_path)
+    
+    # Load JSON data
+    with open(json_file, 'r') as f:
+        data = json.load(f)
+    
+    # Process sequences and make predictions
+    results = []
+    
+    for i in range(len(data) - sequence_length):
+        # Extract sequence
+        sequence = []
+        for frame in data[i:i + sequence_length]:
+            features = extract_features(
+                frame['player1_keypoints'],
+                frame['player2_keypoints'],
+                frame['ball_position']
+            )
+            sequence.append(features)
         
-get_annotations('testing_folder', 'output_folder')
+        # Convert to numpy array and reshape for model
+        sequence = np.array([sequence])  # Add batch dimension
+        
+        # Make prediction
+        prediction = model.predict(sequence, verbose=0)
+        predicted_class = np.argmax(prediction[0])
+        confidence = prediction[0][predicted_class]
+        
+        # Store result
+        results.append({
+            'frame_start': data[i]['frame_number'],
+            'frame_end': data[i + sequence_length - 1]['frame_number'],
+            'predicted_action': predicted_class,
+            'confidence': float(confidence)
+        })
+    
+    return results
+
+def main():
+    # Paths
+    json_file = '30fps1920.json'
+    model_path = 'squash_action_classifier.h5'
+    
+    # Classify actions
+    results = classify_actions_in_file(json_file, model_path)
+    
+    # Print or save results
+    print("\nAction Classifications:")
+    print("----------------------")
+    for r in results:
+        print(f"Frames {r['frame_start']}-{r['frame_end']}: "
+              f"Action {r['predicted_action']} "
+              f"(Confidence: {r['confidence']:.2f})")
+        
+    # Optionally save results
+    with open('action_classifications.json', 'w') as f:
+        json.dump(results, f, indent=4)
+
+if __name__ == "__main__":
+    main()

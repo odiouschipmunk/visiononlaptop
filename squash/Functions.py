@@ -627,7 +627,7 @@ def sum_pixels_in_bbox(frame, bbox):
 
 import math
 
-from squash import inferenceslicing
+#from squash import inferenceslicing
 def ballplayer_detections(
     frame,
     frame_height,
