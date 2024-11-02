@@ -336,7 +336,7 @@ def framepose(
         for box, track_id, kp in zip(boxes, track_ids, keypoints):
             x, y, w, h = box
             player_crop = frame[int(y) : int(y + h), int(x) : int(x + w)]
-            player_image = Image.fromarray(player_crop)
+            Image.fromarray(player_crop)
             # embeddings=get_image_embeddings(player_image)
             Functions.sum_pixels_in_bbox(frame, [x, y, w, h])
             if not Functions.find_match_2d_array(otherTrackIds, track_id):
@@ -565,9 +565,9 @@ def framepose(
                             f"{playerid}",
                             (int(x), int(y)),
                             cv2.FONT_HERSHEY_SIMPLEX,
-                            0.8,
+                            2.5,
                             (255, 255, 255),
-                            3,
+                            7,
                         )
                     i += 1
     return [
@@ -627,7 +627,7 @@ def sum_pixels_in_bbox(frame, bbox):
 
 import math
 
-
+from squash import inferenceslicing
 def ballplayer_detections(
     frame,
     frame_height,
@@ -650,10 +650,12 @@ def ballplayer_detections(
     players,
     player_last_positions,
 ):
+    ball_detection_results = []
     highestconf = 0
     x1 = x2 = y1 = y2 = 0
     # Ball detection
     ball=ballmodel(frame)
+
     if Functions.is_ball_false_pos(past_ball_pos, threshold=15):
         ball_false_pos.append(past_ball_pos[-1])
     label = ""
@@ -720,8 +722,7 @@ def ballplayer_detections(
                 mainball.getlastpos()[1],
                 ballmap,
             )
-
-        """
+    """
     FRAMEPOSE
     """
     # going to take frame, sum_pixels_in_bbox, otherTrackIds, updated, player1+2imagereference, pixdiffs, refrences1+2, players,
@@ -749,31 +750,33 @@ def ballplayer_detections(
     player_last_positions = framepose_result[9]
     annotated_frame = framepose_result[12]
     return [
-        frame,#0
-        frame_count,#1
-        annotated_frame,#2
-        mainball,#3
-        ball,#4
-        ballmap,#5
-        past_ball_pos,#6
-        ball_false_pos,#7
-        running_frame,#8
-        otherTrackIds,#9
-        updated,#10
-        references1,#11
-        references2,#12
-        pixdiffs,#13
-        players,#14
-        player_last_positions,#15
+        frame,  # 0
+        frame_count,  # 1
+        annotated_frame,  # 2
+        mainball,  # 3
+        ball,  # 4
+        ballmap,  # 5
+        past_ball_pos,  # 6
+        ball_false_pos,  # 7
+        running_frame,  # 8
+        otherTrackIds,  # 9
+        updated,  # 10
+        references1,  # 11
+        references2,  # 12
+        pixdiffs,  # 13
+        players,  # 14
+        player_last_positions,  # 15
     ]
+
 
 def slice_frame(width, height, overlap, frame):
     slices = []
     for y in range(0, frame.shape[0], height - overlap):
         for x in range(0, frame.shape[1], width - overlap):
-            slice_frame = frame[y:y + height, x:x + width]
+            slice_frame = frame[y : y + height, x : x + width]
             slices.append(slice_frame)
     return slices
+
 
 def inference_slicing(model, frame, width=100, height=100, overlap=50):
     slices = slice_frame(width, height, overlap, frame)

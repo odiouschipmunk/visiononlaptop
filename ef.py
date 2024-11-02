@@ -47,9 +47,9 @@ def main():
     with open("output/read_player2.txt", "w") as f:
         f.write("")
     pose_model = YOLO("models/yolo11m-pose.pt")
-    ballmodel = YOLO("black_ball_v1(640and15epoc).pt")
+    ballmodel = YOLO("trained-models\\g-ball2(white_latest).pt")
 
-    path = "black_ball_videos/3.mp4"
+    path = "main.mp4"
     print("loaded models")
     ballvideopath = "output/balltracking.mp4"
     cap = cv2.VideoCapture(path)
@@ -57,8 +57,8 @@ def main():
         f.write(
             f"You are analyzing video: {path}.\nPlayer keypoints will be structured as such: 0: Nose 1: Left Eye 2: Right Eye 3: Left Ear 4: Right Ear 5: Left Shoulder 6: Right Shoulder 7: Left Elbow 8: Right Elbow 9: Left Wrist 10: Right Wrist 11: Left Hip 12: Right Hip 13: Left Knee 14: Right Knee 15: Left Ankle 16: Right Ankle.\nIf a keypoint is (0,0), then it has not beeen detected and should be deemed irrelevant. Here is how the output will be structured: \nFrame count\nPlayer 1 Keypoints\nPlayer 2 Keypoints\n Ball Position.\n\n"
         )
-    frame_width = 640
-    frame_height = 360
+    frame_width = 1920
+    frame_height = 1080
     players = {}
     courtref = 0
     occlusion_times = {}
@@ -72,7 +72,7 @@ def main():
     logging.getLogger("ultralytics").setLevel(logging.ERROR)
     output_path = "output/annotated.mp4"
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-    fps = 25
+    fps = 30
     out = cv2.VideoWriter(output_path, fourcc, fps, (frame_width, frame_height))
     ball_out = cv2.VideoWriter(ballvideopath, fourcc, fps, (frame_width, frame_height))
     detections = []
@@ -147,7 +147,7 @@ def main():
 
         if running_frame >= 500:
             pass
-        if frame_count >= 250:
+        if frame_count >= 350:
             cap.release()
             cv2.destroyAllWindows()
         if len(references1) != 0 and len(references2) != 0:
