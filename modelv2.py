@@ -1,5 +1,5 @@
-import to_model
-frames_data=to_model.parse_file('30fps1920/output/final.txt')
+import parse_data_to_json
+frames_data=parse_data_to_json.parse_file('30fps1920/output/final.txt')
 print(f'processed {len(frames_data)} frames\n')
 # pip install git+https://github.com/LLaVA-VL/LLaVA-NeXT.git
 from llava.model.builder import load_pretrained_model
