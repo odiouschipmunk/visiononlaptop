@@ -46,8 +46,9 @@ def main():
         f.write("")
     with open("output/read_player2.txt", "w") as f:
         f.write("")
+    past_10_ball_pos=[]#in the format of [ball pos, frame number]
     pose_model = YOLO("models/yolo11m-pose.pt")
-    ballmodel = YOLO("trained-models\\g-ball2(white_latest).pt")
+    ballmodel = YOLO("trained-models/g-ball2(white_latest).pt")
 
     path = "main.mp4"
     print("loaded models")
@@ -57,8 +58,8 @@ def main():
         f.write(
             f"You are analyzing video: {path}.\nPlayer keypoints will be structured as such: 0: Nose 1: Left Eye 2: Right Eye 3: Left Ear 4: Right Ear 5: Left Shoulder 6: Right Shoulder 7: Left Elbow 8: Right Elbow 9: Left Wrist 10: Right Wrist 11: Left Hip 12: Right Hip 13: Left Knee 14: Right Knee 15: Left Ankle 16: Right Ankle.\nIf a keypoint is (0,0), then it has not beeen detected and should be deemed irrelevant. Here is how the output will be structured: \nFrame count\nPlayer 1 Keypoints\nPlayer 2 Keypoints\n Ball Position.\n\n"
         )
-    frame_width = 720
-    frame_height = 480
+    frame_width = 640
+    frame_height = 360
     players = {}
     courtref = 0
     occlusion_times = {}
@@ -102,7 +103,38 @@ def main():
         reference_image_gray = cv2.cvtColor(reference_image, cv2.COLOR_BGR2GRAY)
         score, _ = ssim_metric(reference_image_gray, frame_gray, full=True)
         return score < threshold
-
+    def is_match_in_play(players, mainball, movement_threshold=50, frames_to_check=5, hit=50):
+        if players.get(1) is None or players.get(2) is None or mainball is None:
+            return False
+        try:
+            lastplayerpos=[]
+            lastballpos=[]
+            ball_hit=player_move=False
+            for i in range(0, frames_to_check):
+                lastplayerpos.append(players.get(1).get_last_x_poses(i).xyn[0][16])
+                lastplayerpos.append(players.get(2).get_last_x_poses(i).xyn[0][16])
+                lastballpos.append(mainball.get_last_x_pos(i))
+            for i in lastplayerpos:
+                i[0]=i[0]*frame_width
+                i[1]=i[1]*frame_height
+            #given that thge ankle position is the 16th and the 17th keypoint, we can check for lunges like so: 
+            #if the player's ankle moves by more than 5 pixels in the last 5 frames, then the player has lunged
+            #if the player has lunged, then the match is in play
+            #print(f'lastplayer pos: {lastplayerpos}')
+            if abs(lastplayerpos[0][0]-lastplayerpos[-1][0])>movement_threshold or abs(lastplayerpos[0][1]-lastplayerpos[-1][1])>movement_threshold:
+                player_move=True
+            #print(f'last ball pos: {lastballpos}')
+            if abs(lastballpos[1][0]-lastballpos[-1][0])>hit or abs(lastballpos[1][1]-lastballpos[-1][1])>hit:
+                ball_hit=True
+            #print(f'last player pos: {lastplayerpos}')
+            #print(f'last ball pos: {lastballpos}')
+            #print(f'player lunged: {player_move}')
+            print(f'ball hit: {ball_hit}')
+            return [player_move, ball_hit]
+        except Exception as e:
+            #print(f'got exception in is_match_in_play: {e}')
+            return False
+            
     reference_points_3d = [
         [0, 0, 9.75],  # Top-left corner, 1
         [6.4, 0, 9.75],  # Top-right corner, 2
@@ -236,6 +268,19 @@ def main():
         players = detections_result[14]
         player_last_positions = detections_result[15]
 
+        #print(f'is match in play: {is_match_in_play(players, mainball)}')
+        match_in_play=is_match_in_play(players, mainball)
+        if match_in_play is not False:
+            print(match_in_play)
+            cv2.putText(
+                annotated_frame,
+                f'ball hit: {str(match_in_play[1])}',
+                (10, frame_height - 100),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.4,
+                (255, 255, 255),
+                1,
+            )
         # Save the heatmap
         # print(players)
         # print(players.get(1).get_latest_pose())
@@ -654,12 +699,13 @@ def main():
                     f"{mainball.getloc()[0]/frame_width}\n{mainball.getloc()[1]/frame_height}\n"
                 )
 
-        try:
-            write()
-        except Exception as e:
-            print(
-                f"could not write to file, most likely because players were not detected yet: {e}"
-            )
+        if running_frame % 3 == 0:
+            try:
+                write()
+            except Exception as e:
+                print(
+                    f"could not write to file, most likely because players were not detected yet: {e}"
+                )
 
         ball_out.write(annotated_frame)
         out.write(annotated_frame)
@@ -673,4 +719,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        print(f'error: {e}')
