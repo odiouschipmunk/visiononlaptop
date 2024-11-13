@@ -10,7 +10,7 @@ def main():
     from squash import Referencepoints, Functions
     import tensorflow as tf
     import matplotlib
-    import framepose
+    import squash.framepose as framepose
     matplotlib.use("Agg")
     from matplotlib import pyplot as plt
     from squash.Ball import Ball

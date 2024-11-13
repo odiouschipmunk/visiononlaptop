@@ -6,7 +6,8 @@ from squash import Referencepoints, Functions
 import tensorflow as tf
 import matplotlib
 import json
-from squash import deepsortframepose as fpose
+
+# from squash import deepsortframepose as fpose
 matplotlib.use("Agg")
 from matplotlib import pyplot as plt
 from squash.Ball import Ball
@@ -155,7 +156,7 @@ def main(path="main.mp4", frame_width=640, frame_height=360):
             for i in range(1, len(threshballpos)):
                 if threshballpos[i][1] > maxheight:
                     maxheight = threshballpos[i][1]
-                    print(f"{threshballpos[i]}")
+                    # print(f"{threshballpos[i]}")
                     # print(f'maxheight: {maxheight}')
                     # print(f'threshballpos[i][1]: {threshballpos[i][1]}')
             if maxheight < (frame_height) / 1.35:
@@ -241,10 +242,10 @@ def main(path="main.mp4", frame_width=640, frame_height=360):
                     player_move = True
                 # print(f'ball hit: {ball_hit}')
                 return [player_move, ball_hit]
-            except Exception as e:
-                print(
-                    f"got exception in is_match_in_play: {e}, line was {e.__traceback__.tb_lineno}"
-                )
+            except Exception:
+                # print(
+                #     f"got exception in is_match_in_play: {e}, line was {e.__traceback__.tb_lineno}"
+                # )
                 return False
 
         reference_points_3d = [
@@ -291,13 +292,12 @@ def main(path="main.mp4", frame_width=640, frame_height=360):
             frame = cv2.resize(frame, (frame_width, frame_height))
             frame_count += 1
 
-
             if len(references1) != 0 and len(references2) != 0:
                 sum(references1) / len(references1)
                 sum(references2) / len(references2)
 
             running_frame += 1
-            
+
             if running_frame == 1:
                 print("frame 1")
                 courtref = np.int64(
@@ -309,7 +309,7 @@ def main(path="main.mp4", frame_width=640, frame_height=360):
                 referenceimage = frame
 
             if is_camera_angle_switched(frame, referenceimage, threshold=0.5):
-                print("camera angle switched")
+                # print("camera angle switched")
                 continue
 
             currentref = int(
@@ -342,6 +342,7 @@ def main(path="main.mp4", frame_width=640, frame_height=360):
 
             # frame, frame_height, frame_width, frame_count, annotated_frame, ballmodel, pose_model, mainball, ball, ballmap, past_ball_pos, ball_false_pos, running_frame
             # framepose_result=framepose.framepose(pose_model=pose_model, frame=frame, otherTrackIds=otherTrackIds, updated=updated, references1=references1, references2=references2, pixdiffs=pixdiffs, players=players, frame_count=frame_count, player_last_positions=player_last_positions, frame_width=frame_width, frame_height=frame_height, annotated_frame=annotated_frame)
+            # bookmark
             detections_result = Functions.ballplayer_detections(
                 frame=frame,
                 frame_height=frame_height,
@@ -380,7 +381,8 @@ def main(path="main.mp4", frame_width=640, frame_height=360):
             pixdiffs = detections_result[13]
             players = detections_result[14]
             player_last_positions = detections_result[15]
-
+            occluded=detections_result[16]
+            print(f'occluded: {occluded}')
             # print(f'is match in play: {is_match_in_play(players, mainball)}')
             match_in_play = is_match_in_play(players, mainball)
             type_of_shot = Functions.classify_shot(
@@ -575,7 +577,8 @@ def main(path="main.mp4", frame_width=640, frame_height=360):
                     player_ankles = [
                         (
                             int(
-                                players.get(1).get_latest_pose().xyn[0][16][0] * frame_width
+                                players.get(1).get_latest_pose().xyn[0][16][0]
+                                * frame_width
                             ),
                             int(
                                 players.get(1).get_latest_pose().xyn[0][16][1]
@@ -584,7 +587,8 @@ def main(path="main.mp4", frame_width=640, frame_height=360):
                         ),
                         (
                             int(
-                                players.get(2).get_latest_pose().xyn[0][16][0] * frame_width
+                                players.get(2).get_latest_pose().xyn[0][16][0]
+                                * frame_width
                             ),
                             int(
                                 players.get(2).get_latest_pose().xyn[0][16][1]
@@ -608,14 +612,17 @@ def main(path="main.mp4", frame_width=640, frame_height=360):
                 normalized_heatmap = cv2.normalize(
                     blurred_heatmap_ankle, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U
                 )
-                heatmap_overlay = cv2.applyColorMap(normalized_heatmap, cv2.COLORMAP_JET)
+                heatmap_overlay = cv2.applyColorMap(
+                    normalized_heatmap, cv2.COLORMAP_JET
+                )
 
                 # Combine with white image
                 cv2.addWeighted(
                     np.ones_like(heatmap_overlay) * 255, 0.5, heatmap_overlay, 0.5, 0
                 )
-            except Exception as e:
-                print(f"line618: {e}") 
+            except Exception:
+                # print(f"line618: {e}")
+                pass
             # Save the combined image
             # cv2.imwrite("output/heatmap_ankle.png", combined_image)
             ballx = bally = 0
@@ -932,7 +939,7 @@ def main(path="main.mp4", frame_width=640, frame_height=360):
                     f.write(
                         f"{mainball.getloc()[0]/frame_width}\n{mainball.getloc()[1]/frame_height}\n"
                     )
-    
+
             try:
                 shot = type_of_shot[0] + " " + type_of_shot[1]
                 wallhit = type_of_shot[2]
@@ -963,14 +970,15 @@ def main(path="main.mp4", frame_width=640, frame_height=360):
                     # print(f'wrote to important!')
                     importantout.write(annotated_frame)
                     importantwrite()
-            except Exception as e:
-                print(f"probably not enough info: {e}")
+            except Exception:
+                # print(f"probably not enough info: {e}")
+                pass
             ball_out.write(annotated_frame)
             out.write(annotated_frame)
             weboutput.write(annotated_frame)
             cv2.imshow("Annotated Frame", annotated_frame)
-            #print(f'frame: {running_frame}')
-            #print(f'time: {time.time()-start}')
+            # print(f'frame: {running_frame}')
+            # print(f'time: {time.time()-start}')
             if cv2.waitKey(1) & 0xFF == ord("q"):
                 break
 
