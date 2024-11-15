@@ -314,6 +314,7 @@ def framepose(
                 print(player_last_positions)
                 last_pos_p1 = player_last_positions.get(1, (None, None))
                 last_pos_p2 = player_last_positions.get(2, (None, None))
+                print(f"last pos p1: {last_pos_p1}")
                 occluded.append(
                     [
                         len(track_ids),
