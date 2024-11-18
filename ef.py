@@ -383,7 +383,7 @@ def main(path="main.mp4", frame_width=640, frame_height=360):
             player_last_positions = detections_result[15]
             occluded=detections_result[16]
             print(f'occluded: {occluded}')
-            # print(f'is match in play: {is_match_in_play(players, mainball)}')
+            # print(f'is match in play: {is_match_in_play(players, mainball)}') 
             match_in_play = is_match_in_play(players, mainball)
             type_of_shot = Functions.classify_shot(
                 past_ball_pos, homography_matrix=homography
