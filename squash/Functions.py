@@ -551,25 +551,19 @@ def ballplayer_detections(
         ball = ballmodel(frame)
         label = ""
         try:
-            for i in range(len(past_ball_pos) - 10, len(past_ball_pos)):
+            # Show last 10 positions with diminishing circles
+            start_idx = max(0, len(past_ball_pos) - 10)
+            for i, pos in enumerate(past_ball_pos[start_idx:]):
+                # Calculate radius - starts at 15 and diminishes to 3
+                radius = max(3, 15 - (i * 1.2))
                 cv2.circle(
                     annotated_frame,
-                    (past_ball_pos[i][0], past_ball_pos[i][1]),
-                    3,
+                    (pos[0], pos[1]),
+                    int(radius),
                     (255, 255, 255),
-                    5,
+                    2
                 )
-                # draw a line between this point and the previous point
-                if i > 0:
-                    cv2.line(
-                        annotated_frame,
-                        (past_ball_pos[i][0], past_ball_pos[i][1]),
-                        (past_ball_pos[i - 1][0], past_ball_pos[i - 1][1]),
-                        (255, 255, 255),
-                        3,
-                    )
         except Exception:
-            # print(f"probably not enough ball positions, : {e}")
             pass
         for box in ball[0].boxes:
             coords = box.xyxy[0] if len(box.xyxy) == 1 else box.xyxy
@@ -740,7 +734,7 @@ def classify_shot(
         trajectory = np.array(past_ball_pos)
 
         # Apply homography transform if provided
-        if homography_matrix is not None:
+        if (homography_matrix is not None):
             points = np.column_stack((trajectory[:, 0:2], np.ones(len(trajectory))))
             transformed = np.dot(homography_matrix, points.T).T
             trajectory[:, 0:2] = transformed[:, :2] / transformed[:, 2:]
