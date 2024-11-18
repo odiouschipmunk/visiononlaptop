@@ -341,7 +341,7 @@ def framepose(
                     occluded,
                 ]
             for box, track_id, kp in zip(boxes, track_ids, keypoints):
-                x, y, w, h = box
+                x, y, w, h = box 
                 player_crop = frame[int(y) : int(y + h), int(x) : int(x + w)]
                 Image.fromarray(player_crop)
                 Functions.sum_pixels_in_bbox(frame, [x, y, w, h])
