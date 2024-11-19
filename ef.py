@@ -6,8 +6,7 @@ from squash import Referencepoints, Functions
 import tensorflow as tf
 import matplotlib
 import json
-
-# from squash import deepsortframepose as fpose
+from squash import deepsortframepose as fpose
 matplotlib.use("Agg")
 from matplotlib import pyplot as plt
 from squash.Ball import Ball
@@ -15,7 +14,11 @@ import logging
 import os
 from skimage.metrics import structural_similarity as ssim_metric
 import time
-
+import csv
+# from transformers import T5Tokenizer, T5ForConditionalGeneration
+# import torch
+# model = T5ForConditionalGeneration.from_pretrained("google/flan-t5-large", device_map="auto", torch_dtype=torch.float16)
+# tokenizer = T5Tokenizer.from_pretrained("google/flan-t5-large")
 start = time.time()
 
 
@@ -70,6 +73,8 @@ def main(path="main.mp4", frame_width=640, frame_height=360):
             f.write("")
         with open("output/final.json", "w") as f:
             f.write("[")
+        with open("output/final.csv", "w") as f:
+            f.write("Frame count,Player 1 Keypoints,Player 2 Keypoints,Ball Position,Shot Type\n")
         pose_model = YOLO("models/yolo11m-pose.pt")
         ballmodel = YOLO("trained-models\\g-ball2(white_latest).pt")
 
@@ -95,7 +100,7 @@ def main(path="main.mp4", frame_width=640, frame_height=360):
         output_path = "output/annotated.mp4"
         weboutputpath = "websiteout/annotated.mp4"
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-        fps = 10
+        fps = 30
         importantoutputpath = "output/important.mp4"
         weboutput = cv2.VideoWriter(
             weboutputpath, fourcc, fps, (frame_width, frame_height)
@@ -156,7 +161,7 @@ def main(path="main.mp4", frame_width=640, frame_height=360):
             for i in range(1, len(threshballpos)):
                 if threshballpos[i][1] > maxheight:
                     maxheight = threshballpos[i][1]
-                    # print(f"{threshballpos[i]}")
+                    print(f"{threshballpos[i]}")
                     # print(f'maxheight: {maxheight}')
                     # print(f'threshballpos[i][1]: {threshballpos[i][1]}')
             if maxheight < (frame_height) / 1.35:
@@ -242,7 +247,7 @@ def main(path="main.mp4", frame_width=640, frame_height=360):
                     player_move = True
                 # print(f'ball hit: {ball_hit}')
                 return [player_move, ball_hit]
-            except Exception:
+            except Exception as e:
                 # print(
                 #     f"got exception in is_match_in_play: {e}, line was {e.__traceback__.tb_lineno}"
                 # )
@@ -279,10 +284,11 @@ def main(path="main.mp4", frame_width=640, frame_height=360):
         ballxy = []
 
         running_frame = 0
-        print("started video input")
+        #print("started video input")
         int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         abs(reference_points[1][0] - reference_points[0][0])
         Functions.validate_reference_points(reference_points, reference_points_3d)
+        print(f'loaded everything in {time.time()-start} seconds')
         while cap.isOpened():
             success, frame = cap.read()
 
@@ -292,24 +298,25 @@ def main(path="main.mp4", frame_width=640, frame_height=360):
             frame = cv2.resize(frame, (frame_width, frame_height))
             frame_count += 1
 
+
             if len(references1) != 0 and len(references2) != 0:
                 sum(references1) / len(references1)
                 sum(references2) / len(references2)
 
             running_frame += 1
-
+            
             if running_frame == 1:
-                print("frame 1")
+                #print("frame 1")
                 courtref = np.int64(
                     Functions.sum_pixels_in_bbox(
                         frame, [0, 0, frame_width, frame_height]
                     )
                 )
-                print(courtref)
+                #print(courtref)
                 referenceimage = frame
 
             if is_camera_angle_switched(frame, referenceimage, threshold=0.5):
-                # print("camera angle switched")
+                #print("camera angle switched")
                 continue
 
             currentref = int(
@@ -317,13 +324,13 @@ def main(path="main.mp4", frame_width=640, frame_height=360):
             )
 
             if abs(courtref - currentref) > courtref * 0.6:
-                print("most likely not original camera frame")
-                print("current ref: ", currentref)
-                print("court ref: ", courtref)
-                print(f"frame count: {frame_count}")
-                print(
-                    f"difference between current ref and court ref: {abs(courtref - currentref)}"
-                )
+                # print("most likely not original camera frame")
+                # print("current ref: ", currentref)
+                # print("court ref: ", courtref)
+                # print(f"frame count: {frame_count}")
+                # print(
+                #     f"difference between current ref and court ref: {abs(courtref - currentref)}"
+                # )
                 continue
 
             ball = ballmodel(frame)
@@ -339,10 +346,9 @@ def main(path="main.mp4", frame_width=640, frame_height=360):
                     (0, 255, 0),
                     2,
                 )
-
+            print(f'loaded models')
             # frame, frame_height, frame_width, frame_count, annotated_frame, ballmodel, pose_model, mainball, ball, ballmap, past_ball_pos, ball_false_pos, running_frame
             # framepose_result=framepose.framepose(pose_model=pose_model, frame=frame, otherTrackIds=otherTrackIds, updated=updated, references1=references1, references2=references2, pixdiffs=pixdiffs, players=players, frame_count=frame_count, player_last_positions=player_last_positions, frame_width=frame_width, frame_height=frame_height, annotated_frame=annotated_frame)
-            # bookmark
             detections_result = Functions.ballplayer_detections(
                 frame=frame,
                 frame_height=frame_height,
@@ -381,9 +387,8 @@ def main(path="main.mp4", frame_width=640, frame_height=360):
             pixdiffs = detections_result[13]
             players = detections_result[14]
             player_last_positions = detections_result[15]
-            occluded=detections_result[16]
-            print(f'occluded: {occluded}')
-            # print(f'is match in play: {is_match_in_play(players, mainball)}') 
+            print(f'finished detections')
+            # print(f'is match in play: {is_match_in_play(players, mainball)}')
             match_in_play = is_match_in_play(players, mainball)
             type_of_shot = Functions.classify_shot(
                 past_ball_pos, homography_matrix=homography
@@ -577,8 +582,7 @@ def main(path="main.mp4", frame_width=640, frame_height=360):
                     player_ankles = [
                         (
                             int(
-                                players.get(1).get_latest_pose().xyn[0][16][0]
-                                * frame_width
+                                players.get(1).get_latest_pose().xyn[0][16][0] * frame_width
                             ),
                             int(
                                 players.get(1).get_latest_pose().xyn[0][16][1]
@@ -587,8 +591,7 @@ def main(path="main.mp4", frame_width=640, frame_height=360):
                         ),
                         (
                             int(
-                                players.get(2).get_latest_pose().xyn[0][16][0]
-                                * frame_width
+                                players.get(2).get_latest_pose().xyn[0][16][0] * frame_width
                             ),
                             int(
                                 players.get(2).get_latest_pose().xyn[0][16][1]
@@ -612,16 +615,14 @@ def main(path="main.mp4", frame_width=640, frame_height=360):
                 normalized_heatmap = cv2.normalize(
                     blurred_heatmap_ankle, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U
                 )
-                heatmap_overlay = cv2.applyColorMap(
-                    normalized_heatmap, cv2.COLORMAP_JET
-                )
+                heatmap_overlay = cv2.applyColorMap(normalized_heatmap, cv2.COLORMAP_JET)
 
                 # Combine with white image
                 cv2.addWeighted(
                     np.ones_like(heatmap_overlay) * 255, 0.5, heatmap_overlay, 0.5, 0
                 )
-            except Exception:
-                # print(f"line618: {e}")
+            except Exception as e:
+                #print(f"line618: {e}") 
                 pass
             # Save the combined image
             # cv2.imwrite("output/heatmap_ankle.png", combined_image)
@@ -756,7 +757,7 @@ def main(path="main.mp4", frame_width=640, frame_height=360):
                     players.get(1).get_last_x_poses(3).xyn[0][16][0] * frame_width,
                     players.get(1).get_last_x_poses(3).xyn[0][16][1] * frame_height,
                 ]
-                rlp2postemp = [
+                rlp2postemp = [ 
                     players.get(2).get_last_x_poses(3).xyn[0][16][0] * frame_width,
                     players.get(2).get_last_x_poses(3).xyn[0][16][1] * frame_height,
                 ]
@@ -787,25 +788,7 @@ def main(path="main.mp4", frame_width=640, frame_height=360):
                     (255, 255, 255),
                     1,
                 )
-                # cv2.putText(
-                #     annotated_frame,
-                #     text7,
-                #     (10, 90),
-                #     cv2.FONT_HERSHEY_SIMPLEX,
-                #     0.4,
-                #     (255, 255, 255),
-                #     1,
-                # )
-                # cv2.putText(
-                #     annotated_frame,
-                #     text8,
-                #     (10, 110),
-                #     cv2.FONT_HERSHEY_SIMPLEX,
-                #     0.4,
-                #     (255, 255, 255),
-                #     1,
-                # )
-                # Functions.transform_and_display(rlp1postemp, rlp2postemp, pixel_reference=reference_points, reference_points_3d=reference_points_3d, image=annotated_frame)
+                
             if len(ballxy) > 0:
                 balltext = f"Ball position: {ballxy[-1][0]},{ballxy[-1][1]}"
                 rlball = Functions.pixel_to_3d(
@@ -830,155 +813,34 @@ def main(path="main.mp4", frame_width=640, frame_height=360):
                     (255, 255, 255),
                     1,
                 )
-
+            print(f'finished writing frame {frame_count}')
             def write():
-                with open("output/read_player1.txt", "a") as f:
-                    f.write(f"{p1postemp}\n")
-                    f.close()
-                with open("output/read_player2.txt", "a") as f:
-                    f.write(f"{p2postemp}\n")
-                    f.close()
-                with open("output/player1.txt", "a") as f:
-                    for pos in p1postemp:
-                        f.write(f"{pos[0]}\n{pos[1]}\n")
-                    f.close()
-                with open("output/player2.txt", "a") as f:
-                    for pos in p2postemp:
-                        f.write(f"{pos[0]}\n{pos[1]}\n")
-                    f.close()
                 with open("output/ball.txt", "a") as f:
                     f.write(f"{mainball.getloc()[0]}\n{mainball.getloc()[1]}\n")
-                with open("output/read_ball.txt", "a") as f:
-                    f.write(f"{mainball.getloc()}\n")
-                with open("output/ball-xyn.txt", "a") as f:
-                    f.write(
-                        f"{mainball.getloc()[0]/frame_width}\n{mainball.getloc()[1]/frame_height}\n"
-                    )
-                with open("output/final.txt", "a") as f:
-                    text = f"Frame: {running_frame}{{Player 1: {p1postemp}\nPlayer 2: {p2postemp}\nBall: {mainball.getloc()}\nType of shot: {type_of_shot[0]+type_of_shot[1]}\nBall hit: {str(match_in_play[1])}\nWalls hit: {type_of_shot[2]}}}\n"
-                    f.write(f"{text}\n")
-                    f.close()
 
-            def jsonwrite():
-                temp1 = p1postemp.tolist()
-                temp2 = p2postemp.tolist()
-                # multiply all x values [0] by frame_width and all y values [1] by frame_height
-                for i in range(len(temp1)):
-                    temp1[i][0] = temp1[i][0] * frame_width
-                    temp1[i][0] = round(temp1[i][0], 2)
-                    temp1[i][1] = temp1[i][1] * frame_height
-                    temp1[i][1] = round(temp1[i][1], 2)
-                for i in range(len(temp2)):
-                    temp2[i][0] = temp2[i][0] * frame_width
-                    temp2[i][0] = round(temp2[i][0], 2)
-                    temp2[i][1] = temp2[i][1] * frame_height
-                    temp2[i][1] = round(temp2[i][1], 2)
-                data = {
-                    "Frame": running_frame,
-                    "Player 1": temp1,
-                    "Player 2": temp2,
-                    "Ball": mainball.getloc(),
-                    "Type of shot": type_of_shot[0] + " " + type_of_shot[1],
-                    "Ball hit": str(match_in_play[1]),
-                    "Walls hit": type_of_shot[2],
-                }
-                with open("output/final.json", "a") as f:
-                    json.dump(data, f)
-                    f.write(",\n")
-
-            def alljsonwrite():
-                # make it so that p1postemp, p2postemp, and mainball.getloc() are all in the same format, basically to multiple p1postemp and p2postemp by frame_width and frame_height
-                temp1 = p1postemp.tolist()
-                temp2 = p2postemp.tolist()
-                # multiply all x values [0] by frame_width and all y values [1] by frame_height
-                for i in range(len(temp1)):
-                    temp1[i][0] = temp1[i][0] * frame_width
-                    temp1[i][0] = round(temp1[i][0], 2)
-                    temp1[i][1] = temp1[i][1] * frame_height
-                    temp1[i][1] = round(temp1[i][1], 2)
-                for i in range(len(temp2)):
-                    temp2[i][0] = temp2[i][0] * frame_width
-                    temp2[i][0] = round(temp2[i][0], 2)
-                    temp2[i][1] = temp2[i][1] * frame_height
-                    temp2[i][1] = round(temp2[i][1], 2)
-                # print(temp1)
-
-                data = {
-                    "Frame": running_frame,
-                    "Player 1": temp1,
-                    "Player 2": temp2,
-                    "Ball": mainball.getloc(),
-                    "Type of shot": type_of_shot[0] + " " + type_of_shot[1],
-                    "Ball hit": str(match_in_play[1]),
-                    "Walls hit": type_of_shot[2],
-                }
-                with open("output/alldata.json", "a") as f:
-                    json.dump(data, f)
-                    f.write(",\n")
-
-            def importantwrite():
-                with open("importantoutput/read_player1.txt", "a") as f:
-                    f.write(f"{p1postemp}\n")
-                    f.close()
-                with open("importantoutput/read_player2.txt", "a") as f:
-                    f.write(f"{p2postemp}\n")
-                    f.close()
-                with open("importantoutput/player1.txt", "a") as f:
-                    for pos in p1postemp:
-                        f.write(f"{pos[0]}\n{pos[1]}\n")
-                    f.close()
-                with open("importantoutput/player2.txt", "a") as f:
-                    for pos in p2postemp:
-                        f.write(f"{pos[0]}\n{pos[1]}\n")
-                    f.close()
-                with open("importantoutput/ball.txt", "a") as f:
-                    f.write(f"{mainball.getloc()[0]}\n{mainball.getloc()[1]}\n")
-                with open("importantoutput/read_ball.txt", "a") as f:
-                    f.write(f"{mainball.getloc()}\n")
-                with open("importantoutput/ball-xyn.txt", "a") as f:
-                    f.write(
-                        f"{mainball.getloc()[0]/frame_width}\n{mainball.getloc()[1]/frame_height}\n"
-                    )
+            def csvwrite():
+                with open("output/final.csv", "a") as f:
+                    csvwriter = csv.writer(f)
+                    #going to be putting the framecount, playerkeypoints, ball position, time, type of shot, and also match in play
+                    timet=running_frame/fps
+                    shot="None" if type_of_shot is None else type_of_shot[0]+" "+type_of_shot[1]
+                    data=[running_frame, players.get(1).get_latest_pose().xyn[0], players.get(2).get_latest_pose().xyn[0], mainball.getloc(),shot]
+                    csvwriter.writerow(data)
 
             try:
-                shot = type_of_shot[0] + " " + type_of_shot[1]
-                wallhit = type_of_shot[2]
-                if running_frame % 3 == 0:
-                    write()
-                # if theres a change in the shot type, if the ball hit a wall, or just generally(mod 10==0) then write to json file
-                if (
-                    past_walls_hit != wallhit
-                    or past_shot != shot
-                    or running_frame % 10 == 0
-                ):
-                    jsonwrite()
-
-                    past_walls_hit = wallhit
-                    past_shot = shot
-                alljsonwrite()
-            except Exception:
-                # print(f"error: {e}")
-                pass
-
-                # print(f"error: {e}")
-                # print(f'line was {e.__traceback__.tb_lineno}')
-                # print(f'all info about e: ')
-            try:
-                # print(match_in_play)
-
-                if match_in_play[0] or match_in_play[1]:
-                    # print(f'wrote to important!')
-                    importantout.write(annotated_frame)
-                    importantwrite()
-            except Exception:
-                # print(f"probably not enough info: {e}")
-                pass
-            ball_out.write(annotated_frame)
+                #write()
+                csvwrite()
+            except Exception as e:
+                print(f'error:3 {e}')
+                print(f'line was {e.__traceback__.tb_lineno}')
+  
             out.write(annotated_frame)
-            weboutput.write(annotated_frame)
             cv2.imshow("Annotated Frame", annotated_frame)
-            # print(f'frame: {running_frame}')
-            # print(f'time: {time.time()-start}')
+
+            
+            print(f'finished frame {frame_count}')
+            #print(f'frame: {running_frame}')
+            #print(f'time: {time.time()-start}')
             if cv2.waitKey(1) & 0xFF == ord("q"):
                 break
 
