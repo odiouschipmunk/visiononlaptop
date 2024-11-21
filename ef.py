@@ -833,7 +833,17 @@ def main(path="main.mp4", frame_width=640, frame_height=360):
             except Exception as e:
                 print(f'error:3 {e}')
                 print(f'line was {e.__traceback__.tb_lineno}')
-  
+
+            #check if the csv file has more than 50 lines and then get the last 5 csv lines
+            with open("output/final.csv", "r") as f:
+                lines = f.readlines()
+                if len(lines) > 50:
+                    csvreader = csv.reader(lines)
+                    last5 = list(csvreader)[-5:]
+                    print(f'last 5 lines: {last5}')
+                    print(Functions.input_model(str(last5)))
+                    #print(f'last 5 lines: {last5}')
+            
             out.write(annotated_frame)
             cv2.imshow("Annotated Frame", annotated_frame)
 
