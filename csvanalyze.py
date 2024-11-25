@@ -1,131 +1,110 @@
 import pandas as pd
 import numpy as np
-import ast
-from typing import Dict, Tuple, List
+import re
 
-# Map keypoint indices to body parts
-KEYPOINT_MAP = {
-    0: "Nose",
-    4: "Left Shoulder",
-    5: "Right Shoulder", 
-    6: "Left Elbow",
-    7: "Right Elbow",
-    8: "Left Wrist",
-    9: "Right Wrist",
-    10: "Left Hip",
-    11: "Right Hip",
-    12: "Left Knee",
-    13: "Right Knee",
-    14: "Left Ankle",
-    15: "Right Ankle"
-}
+def parse_coordinates(coord_str):
+    """Convert string representation of coordinates to numpy array"""
+    try:
+        # Extract numbers using regex
+        numbers = re.findall(r'[\d.]+', coord_str)
+        # Convert to floats and reshape into pairs
+        coords = np.array([float(x) for x in numbers]).reshape(-1, 2)
+        return coords
+    except Exception as e:
+        print(f"Error parsing coordinates: {e}")
+        return None
 
-def parse_keypoints(keypoints_str: str) -> np.ndarray:
-    """Convert keypoint string to numpy array"""
-    return np.array(ast.literal_eval(keypoints_str))
-
-def analyze_court_position(keypoints: np.ndarray) -> Tuple[str, str]:
-    """Determine player's vertical and horizontal court position"""
-    valid_points = keypoints[keypoints.any(axis=1)]
+def get_court_position(keypoints):
+    """Determine player's position on court based on hip points (11,12)"""
+    if keypoints is None or len(keypoints) < 17:
+        return "unknown"
+    
+    # Get hip points (indices 11,12)
+    hip_points = keypoints[11:13]
+    # Filter zero points
+    valid_points = hip_points[~np.all(hip_points == 0, axis=1)]
+    
     if len(valid_points) == 0:
-        return "unknown", "unknown"
+        return "unknown"
     
-    avg_y = np.mean(valid_points[:, 1])
-    avg_x = np.mean(valid_points[:, 0])
+    x_avg = np.mean(valid_points[:, 0])
+    y_avg = np.mean(valid_points[:, 1])
     
-    vert_pos = "back" if avg_y > 0.6 else "middle" if avg_y > 0.4 else "front"
-    horiz_pos = "right" if avg_x > 0.6 else "middle" if avg_x > 0.4 else "left"
-    
-    return vert_pos, horiz_pos
-
-def analyze_shot_dynamics(ball_pos: List[int], prev_ball_pos: List[int]) -> Dict:
-    """Analyze ball movement and shot characteristics"""
-    if prev_ball_pos is None:
-        return {"speed": 0, "direction": "unknown"}
-    
-    dx = ball_pos[0] - prev_ball_pos[0]
-    dy = ball_pos[1] - prev_ball_pos[1]
-    speed = np.sqrt(dx**2 + dy**2)
-    
-    # Determine shot direction
-    angle = np.arctan2(dy, dx)
-    directions = {
-        (-np.pi/4, np.pi/4): "straight",
-        (np.pi/4, 3*np.pi/4): "lob",
-        (-3*np.pi/4, -np.pi/4): "drop",
-    }
-    
-    direction = next((k for k, v in directions.items() if v[0] <= angle <= v[1]), "cross-court")
-    
-    return {
-        "speed": speed,
-        "direction": direction
-    }
-
-def generate_frame_description(
-    frame_count: int,
-    p1_keypoints: np.ndarray,
-    p2_keypoints: np.ndarray,
-    ball_pos: List[int],
-    prev_ball_pos: List[int],
-    shot_type: str
-) -> str:
-    """Generate detailed natural language description of the frame"""
-    
-    # Analyze player positions
-    p1_vert, p1_horiz = analyze_court_position(p1_keypoints)
-    p2_vert, p2_horiz = analyze_court_position(p2_keypoints)
-    
-    # Analyze shot dynamics
-    dynamics = analyze_shot_dynamics(ball_pos, prev_ball_pos)
-    
-    # Generate description
-    description = f"Frame {frame_count}:\n"
-    
-    # Player 1 description
-    description += f"Player 1 is positioned in the {p1_vert} {p1_horiz} of the court. "
-    
-    # Calculate player 1's stance and positioning
-    p1_valid_points = p1_keypoints[p1_keypoints.any(axis=1)]
-    if len(p1_valid_points) > 0:
-        shoulder_width = np.linalg.norm(p1_keypoints[4] - p1_keypoints[5])
-        description += f"Their stance is {'wide' if shoulder_width > 0.2 else 'narrow'}. "
-    
-    # Player 2 description
-    description += f"\nPlayer 2 is positioned in the {p2_vert} {p2_horiz} of the court. "
-    
-    # Shot description
-    if dynamics["speed"] > 0:
-        description += f"\nThe ball is moving at {dynamics['speed']:.1f} pixels per frame "
-        description += f"in a {dynamics['direction']} trajectory. "
-    
-    description += f"\nShot type: {shot_type}"
-    
-    return description
-
-def analyze_csv(csv_file: str):
-    """Main function to analyze CSV data and generate descriptions"""
-    df = pd.read_csv(csv_file)
-    prev_ball_pos = None
-    
-    for _, row in df.iterrows():
-        p1_keypoints = parse_keypoints(row['Player 1 Keypoints'])
-        p2_keypoints = parse_keypoints(row['Player 2 Keypoints'])
-        ball_pos = ast.literal_eval(row['Ball Position'])
+    x_pos = "center"
+    if x_avg < 0.45: x_pos = "left"
+    elif x_avg > 0.55: x_pos = "right"
         
-        description = generate_frame_description(
-            row['Frame count'],
-            p1_keypoints,
-            p2_keypoints,
-            ball_pos,
-            prev_ball_pos,
-            row['Shot Type']
-        )
-        
-        print(description)
-        print("-" * 80)
-        
-        prev_ball_pos = ball_pos
+    y_pos = "middle"
+    if y_avg < 0.6: y_pos = "front"
+    elif y_avg > 0.75: y_pos = "back"
+    
+    return f"{y_pos} {x_pos}"
+
+def is_lunging(keypoints):
+    """Detect if player is lunging based on knee and ankle positions"""
+    if keypoints is None or len(keypoints) < 17:
+        return False
+    
+    knees = keypoints[13:15]
+    ankles = keypoints[15:17]
+    
+    valid_knees = knees[~np.all(knees == 0, axis=1)]
+    valid_ankles = ankles[~np.all(ankles == 0, axis=1)]
+    
+    if len(valid_knees) == 0 or len(valid_ankles) == 0:
+        return False
+    
+    knee_y = np.mean(valid_knees[:, 1])
+    ankle_y = np.mean(valid_ankles[:, 1])
+    
+    return abs(knee_y - ankle_y) > 0.15
+
+def analyze_frame(row):
+    """Generate description for a single frame"""
+    frame = row['Frame count']
+    p1_keypoints = parse_coordinates(row['Player 1 Keypoints'])
+    p2_keypoints = parse_coordinates(row['Player 2 Keypoints'])
+    
+    # Parse ball position - handle both string and list formats
+    if isinstance(row['Ball Position'], str):
+        ball_pos = [int(x) for x in re.findall(r'\d+', row['Ball Position'])]
+    else:
+        ball_pos = row['Ball Position']
+    
+    shot_type = row['Shot Type']
+    
+    description = []
+    
+    # Player 1 analysis
+    p1_pos = get_court_position(p1_keypoints)
+    p1_lunging = is_lunging(p1_keypoints)
+    p1_desc = f"Player 1 is in the {p1_pos} area"
+    if p1_lunging:
+        p1_desc += " and is lunging"
+    description.append(p1_desc)
+    
+    # Player 2 analysis
+    p2_pos = get_court_position(p2_keypoints)
+    p2_lunging = is_lunging(p2_keypoints)
+    p2_desc = f"Player 2 is in the {p2_pos} area"
+    if p2_lunging:
+        p2_desc += " and is lunging"
+    description.append(p2_desc)
+    
+    # Ball analysis
+    if ball_pos and not (ball_pos == [0, 0]):
+        description.append(f"Ball position: {ball_pos}")
+        if shot_type:
+            description.append(f"Shot type: {shot_type}")
+    
+    return "\n".join(description)
+
+def main():
+    df = pd.read_csv('output/final.csv')
+    for index, row in df.iterrows():
+        print(f"\nFrame {row['Frame count']}:")
+        print(analyze_frame(row))
+        print("-" * 50)
 
 if __name__ == "__main__":
-    analyze_csv("squash_game.csv")
+    main()
