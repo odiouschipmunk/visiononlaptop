@@ -841,7 +841,7 @@ def main(path="main.mp4", frame_width=640, frame_height=360):
                     csvreader = csv.reader(lines)
                     last5 = list(csvreader)[-5:]
                     print(f'last 5 lines: {last5}')
-                    print(Functions.input_model(str(last5)))
+                    #print(Functions.input_model(str(last5)))
                     #print(f'last 5 lines: {last5}')
             
             out.write(annotated_frame)

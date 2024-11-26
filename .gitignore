@@ -8,3 +8,5 @@ __pycache__
 .vscode
 downloads*
 output
+output2
+*.mp4
