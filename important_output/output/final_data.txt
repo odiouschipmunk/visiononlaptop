@@ -1,2 +1,0 @@
-This data is formatted as player ankle positions(1 and 2), \n player hand positions(1 and 2), and \n ball positions.
-This would be formatted as follows: 
