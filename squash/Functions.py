@@ -8,17 +8,7 @@ from skimage.metrics import structural_similarity as ssim_metric
 from scipy.signal import find_peaks
 # from squash import Functions  # Remove if Functions.py replaces this
 from squash.Player import Player
-from norfair import Detection, Tracker, draw_tracked_objects
-from norfair.filter import OptimizedKalmanFilterFactory
 
-def create_norfair_tracker():
-    return Tracker(
-        distance_function="euclidean",
-        distance_threshold=50,
-        hit_counter_max=10,
-        filter_factory=OptimizedKalmanFilterFactory(),
-        past_detections_length=5
-    )
     
 def find_match_2d_array(array, x):
     for i in range(len(array)):
@@ -26,7 +16,46 @@ def find_match_2d_array(array, x):
             return True
     return False
 
-
+def cleanwrite():
+    
+        with open("output/ball.txt", "w") as f:
+            f.write("")
+        with open("output/player1.txt", "w") as f:
+            f.write("")
+        with open("output/player2.txt", "w") as f:
+            f.write("")
+        with open("output/ball-xyn.txt", "w") as f:
+            f.write("")
+        with open("output/read_ball.txt", "w") as f:
+            f.write("")
+        with open("output/read_player1.txt", "w") as f:
+            f.write("")
+        with open("output/read_player2.txt", "w") as f:
+            f.write("")
+        with open("importantoutput/ball.txt", "w") as f:
+            f.write("")
+        with open("importantoutput/player1.txt", "w") as f:
+            f.write("")
+        with open("importantoutput/player2.txt", "w") as f:
+            f.write("")
+        with open("importantoutput/ball-xyn.txt", "w") as f:
+            f.write("")
+        with open("importantoutput/read_ball.txt", "w") as f:
+            f.write("")
+        with open("importantoutput/read_player1.txt", "w") as f:
+            f.write("")
+        with open("importantoutput/read_player2.txt", "w") as f:
+            f.write("")
+        with open("output/final.json", "w") as f:
+            f.write("[")
+        with open("output/final.csv", "w") as f:
+            f.write(
+                "Frame count,Player 1 Keypoints,Player 2 Keypoints,Ball Position,Shot Type\n"
+            )
+        with open("textoutput.csv", "w") as f:
+            f.write(
+                "Frame count,Player 1 Keypoints,Player 2 Keypoints,Ball Position,Shot Type\n"
+            )
 def drawmap(lx, ly, rx, ry, map):
     # Update heatmap at the ankle positions
     lx = min(max(lx, 0), map.shape[1] - 1)  # Bound lx to [0, width-1]
@@ -289,8 +318,6 @@ def pixel_to_3d(pixel_point, H, rl_reference_points):
 
 # from squash.framepose import framepose
 def framepose(
-    playertracker,
-    balltracker,
     pose_model,
     frame,
     other_track_ids,
@@ -357,8 +384,6 @@ def framepose(
                     frame_height,
                     annotated_frame,
                     occluded,
-                    playertracker,
-                    balltracker,
                 ]
             for box, track_id, kp in zip(boxes, track_ids, keypoints):
                 x, y, w, h = box
@@ -479,8 +504,6 @@ def framepose(
             frame_height,
             annotated_frame,
             occluded,
-            playertracker,
-            balltracker,
         ]
     except Exception:
         return [
@@ -498,8 +521,6 @@ def framepose(
             frame_height,
             annotated_frame,
             occluded,
-            playertracker,
-            balltracker,
         ]
 
 
@@ -526,8 +547,6 @@ def ballplayer_detections(
     pixdiffs,
     players,
     player_last_positions,
-    playertracker,
-    balltracker,
 ):
     try:
         highestconf = 0
@@ -621,8 +640,6 @@ def ballplayer_detections(
             frame_width=frame_width,
             frame_height=frame_height,
             annotated_frame=annotated_frame,
-            playertracker=playertracker,
-            balltracker=balltracker,
         )
         other_track_ids = framepose_result[2]
         updated = framepose_result[3]
@@ -633,8 +650,6 @@ def ballplayer_detections(
         player_last_positions = framepose_result[9]
         annotated_frame = framepose_result[12]
         occluded = framepose_result[13]
-        playertracker=framepose_result[14]
-        balltracker=framepose_result[15]
         
         return [
             frame,  # 0
@@ -654,8 +669,6 @@ def ballplayer_detections(
             players,  # 14
             player_last_positions,  # 15
             occluded,  # 16
-            playertracker,  # 17
-            balltracker,  # 18
         ]
     except Exception:
         return [
@@ -676,8 +689,6 @@ def ballplayer_detections(
             players,  # 14
             player_last_positions,  # 15
             occluded,  # 16
-            playertracker,  # 17
-            balltracker,  # 18
         ]
 
 def apply_homography(H, points, inverse=False):

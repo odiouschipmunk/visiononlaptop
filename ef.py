@@ -2,7 +2,7 @@ import cv2
 from ultralytics import YOLO
 import numpy as np
 import math
-from squash import Referencepoints, Functions  # Ensure Functions is imported
+from squash import Referencepoints, Functions
 import tensorflow as tf
 import matplotlib
 matplotlib.use("Agg")
@@ -12,12 +12,12 @@ import logging
 import os
 import time
 import csv
-from norfair import Detection, Tracker, Video, draw_tracked_objects
-
+#from norfair import Detection, Tracker, Video, draw_tracked_objects
+start=0
+end=start+100
 start = time.time()
-norfair_player_tracker=Functions.create_norfair_tracker()
-norfair_ball_tracker=Functions.create_norfair_tracker()
 
+Functions.cleanwrite()
 def main(path="main.mp4", frame_width=640, frame_height=360):
     try:
         print("imported all")
@@ -37,41 +37,7 @@ def main(path="main.mp4", frame_width=640, frame_height=360):
             positions = [(data[i], data[i + 1]) for i in range(0, len(data), 2)]
 
             return positions
-
-        with open("output/ball.txt", "w") as f:
-            f.write("")
-        with open("output/player1.txt", "w") as f:
-            f.write("")
-        with open("output/player2.txt", "w") as f:
-            f.write("")
-        with open("output/ball-xyn.txt", "w") as f:
-            f.write("")
-        with open("output/read_ball.txt", "w") as f:
-            f.write("")
-        with open("output/read_player1.txt", "w") as f:
-            f.write("")
-        with open("output/read_player2.txt", "w") as f:
-            f.write("")
-        with open("importantoutput/ball.txt", "w") as f:
-            f.write("")
-        with open("importantoutput/player1.txt", "w") as f:
-            f.write("")
-        with open("importantoutput/player2.txt", "w") as f:
-            f.write("")
-        with open("importantoutput/ball-xyn.txt", "w") as f:
-            f.write("")
-        with open("importantoutput/read_ball.txt", "w") as f:
-            f.write("")
-        with open("importantoutput/read_player1.txt", "w") as f:
-            f.write("")
-        with open("importantoutput/read_player2.txt", "w") as f:
-            f.write("")
-        with open("output/final.json", "w") as f:
-            f.write("[")
-        with open("output/final.csv", "w") as f:
-            f.write(
-                "Frame count,Player 1 Keypoints,Player 2 Keypoints,Ball Position,Shot Type\n"
-            )
+        
         pose_model = YOLO("models/yolo11m-pose.pt")
         ballmodel = YOLO("trained-models\\g-ball2(white_latest).pt")
 
@@ -242,8 +208,6 @@ def main(path="main.mp4", frame_width=640, frame_height=360):
                 pixdiffs=pixdiffs,
                 players=players,
                 player_last_positions=player_last_positions,
-                playertracker=norfair_player_tracker,
-                balltracker=norfair_ball_tracker,
             )
             frame = detections_result[0]
             frame_count = detections_result[1]
@@ -723,7 +687,11 @@ def main(path="main.mp4", frame_width=640, frame_height=360):
                 csvwrite()
             except Exception as e:
                 pass
-
+            
+            if running_frame>end+100:
+                with open('textoutput.csv', 'a') as f:
+                    f.write(Functions.parse_through(start,end,'textoutput.csv'))
+                
             out.write(annotated_frame)
             cv2.imshow("Annotated Frame", annotated_frame)
 
